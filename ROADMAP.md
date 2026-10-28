@@ -84,6 +84,8 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 
 **Goal:** make REA usage repeatable and turn findings into traceable evidence.
 
+**Execution status (2026-10-28):** the initial REA/host audit is documented, but this phase's gate has not passed. The current NixOS host is outside REA's documented Linux support boundary, and no Studio reference installation is accessible. See [the REA lab audit](docs/research/phase-1-rea-lab.md) and [the P0 workflow investigation plan](docs/research/phase-1-p0-workflow-plan.md).
+
 - Configure REA and a native provider on the Linux host. Record REA, provider, and target versions and hashes in every report.
 - Inventory the Studio installation and binaries; identify components, dependencies, data files, strings, exports, and areas that remain unknown.
 - Investigate one question at a time. Follow an observable action through its implementation: input → function/caller → changed state or data → visible result.
