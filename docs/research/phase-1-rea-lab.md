@@ -38,7 +38,7 @@
 
 ## Static investigation
 
-- **Observation:** REA's Ghidra provider was configured ephemerally and its provider-specific checks passed. A read-only string search for `.rbxl` in `RobloxStudioBeta.exe` was started with `rea search ... --kind strings --provider ghidra`. The first run exceeded REA's 330-second import/analyze deadline and returned an incomplete `provider_timeout`, with no search finding. A retry using the documented 900-second startup timeout is in progress; neither attempt is treated as evidence until it completes successfully.
+- **Observation:** REA's Ghidra provider was configured ephemerally and its provider-specific checks passed. A read-only string search for `.rbxl` in `RobloxStudioBeta.exe` was attempted with `rea search ... --kind strings --provider ghidra`. The first run exceeded REA's 330-second import/analyze deadline; a retry with a 900-second startup timeout also ended with `provider_timeout`. Both results were explicitly incomplete and contain no usable search finding. No `OutOfMemoryError` was confirmed; a memory cause cannot be ruled out.
 - **Limitation:** the downloaded ZIP is a versioned package, not a live native Windows Studio session. No startup, open/save, hierarchy, property editor, Luau editor, viewport, undo/redo, or playtest behavior has been observed.
 - **Unknown:** GPU/driver behavior, runtime-loaded components, install-time state, user configuration, and behavior across Studio versions.
 
@@ -48,9 +48,9 @@
 
 ## Next steps
 
-1. Finish the bounded read-only Ghidra query and record its output, provider version, binary hash, and limitations if it succeeds.
-2. Obtain access to a native Windows Studio session for disposable local-project observation. Record Studio and Windows versions, GPU/driver, display settings, fixture hashes, and exact action sequences.
-3. Work through P0-01 to P0-08, recording observable outcomes and separating observations from interpretation and hypotheses.
+1. Obtain access to a native Windows Studio session for disposable local-project observation. Record Studio and Windows versions, GPU/driver, display settings, fixture hashes, and exact action sequences.
+2. Work through P0-01 to P0-08, recording observable outcomes and separating observations from interpretation and hypotheses.
+3. If a specific static question remains useful, retry with a narrower analyzer profile or a smaller binary; do not treat either timed-out result as evidence.
 4. Before treating the acquisition script as update automation, revalidate the current client-version response schema and matching versioned archive behavior. Later add the scheduled GitHub Actions check described in `ROADMAP.md`; it must publish metadata only and must not retain Roblox binaries in GitHub storage.
 
 ## Sources
