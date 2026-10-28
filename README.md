@@ -6,7 +6,7 @@ This is intended to become a distributable tool for Linux creators beyond the re
 
 ## Status
 
-The Phase 0 native prototype, Linux build checks, and headless Wayland/X11 baseline are in place, alongside the completed REA lab and evidence-based contracts for all eight P0 workflows. This is still pre-product: the repository has no Studio workflow implementation, supported release environment, or published app. The prototype measures a generated hierarchy, long source buffer, and instanced renderer; it is not a usable Studio replacement. See the [roadmap](ROADMAP.md), [Linux support matrix](docs/platform/linux-support-matrix.md), and [headless measurements](benchmarks/results/README.md).
+The Phase 0 architecture and measurement gate and the Phase 1 REA/evidence gate are complete. The native prototype, Linux build checks, and headless Wayland/X11 baseline passed GitHub Actions; the contracts cover all eight P0 workflows. This remains pre-product: no Studio workflow is implemented, no release environment is qualified, and no app is published. The prototype measures a generated hierarchy, long source buffer, and instanced renderer; it is not a usable Studio replacement. See the [roadmap](ROADMAP.md), [Linux support matrix](docs/platform/linux-support-matrix.md), and [headless measurements](benchmarks/results/README.md).
 
 ## Principles
 

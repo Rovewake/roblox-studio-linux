@@ -1,6 +1,6 @@
 # Roadmap: Native Roblox Studio for Linux
 
-**Status:** initial plan, based on research conducted on 2026-10-28
+**Status:** Phases 0 and 1 exit gates passed on 2026-10-28; product workflow implementation remains ahead. Phase 0's final [GitHub Actions run](https://github.com/Rovewake/roblox-studio-linux/actions/runs/40752228787) passed the repository checks, Rust formatting/tests/Clippy, optimized Linux build, and isolated headless Wayland/X11 smoke tests.
 **Goal:** independently reimplement Roblox Studio workflows as a native Linux application. Establish compatibility from technical documentation, static evidence, public format specifications, fixtures, and creator feedback. Measure performance against Linux-defined workload goals and the port's own previous builds; direct Windows parity and performance claims are out of scope because this project has no Windows test environment.
 
 ## Assumptions and boundaries
@@ -67,6 +67,8 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 ### Phase 0 — baseline, scope, and architecture decisions
 
 **Goal:** replace assumptions with a measurable target before building expensive subsystems.
+
+**Execution status (2026-10-28): exit gate passed.** The workflow inventory and eight P0 contracts are recorded; the reference package/version provenance is pinned for static inspection; the Rust/egui/WGPU candidate is accepted for the first native slice; and the stress prototype rendered in private headless Wayland and X11 servers. Five 30-second software-rendering captures per backend are recorded with raw reports and limits. The final [CI run](https://github.com/Rovewake/roblox-studio-linux/actions/runs/40752228787) passed repository checks, formatting, unit tests, Clippy, release build, and both headless smoke tests using Node 24 actions. The measurements selected Vulkan llvmpipe: they do not qualify physical GPUs, real desktop compositors, product SLOs, or release support. Those remain open until a usable workflow can be tested on representative Linux systems.
 
 - Build the Studio workflow inventory in `docs/compatibility/`, with P0/P1/P2 priority, steps, initial state, expected result, and dependencies.
 - Pin a WindowsStudio64 package version for static inspection only. Record the upload ID and SHA-256 hashes of analyzed executables; do not plan a Windows OS, GPU, display, or live application baseline.

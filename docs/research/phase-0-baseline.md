@@ -1,7 +1,7 @@
 # Phase 0 baseline and scope
 
 **Date:** 2026-10-28
-**Status:** discovery and five-run-per-backend headless baseline complete; final GitHub Actions verification pending.
+**Status:** Phase 0 exit gate passed. The [final GitHub Actions run](https://github.com/Rovewake/roblox-studio-linux/actions/runs/40752228787) passed repository checks, formatting, tests, Clippy, the optimized build, and private Wayland/X11 smoke tests.
 
 ## Repository state before the spike
 
