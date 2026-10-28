@@ -53,7 +53,7 @@ How should the native Rust workspace get real Luau parsing, compilation, type an
 - Compile synthetic Luau samples and malformed source; assert diagnostic kind and stable one-based source positions.
 - Preserve exact source bytes across edit operations, including Unicode and line-ending differences.
 - Execute only deterministic synthetic scripts. Confirm print output, explicit missing-global errors, worker timeout/cancellation, memory-limit handling, and nonblocking job start.
-- The compiler baseline is captured for deterministic 1k, 10k, and 50k-line source sizes with five warmups, 31 repetitions, and five independent processes. Add worker/VM startup, execution, and cancellation metrics as separate workloads before optimizing those paths. Do not claim an optimization until a diagnosed bottleneck is repeatably improved without contract regressions.
+- The [compiler baseline](../../benchmarks/results/README.md#phase-3-luau-compiler-baseline) was captured for deterministic 1k, 10k, and 50k-line source sizes with five warmups, 31 repetitions, and five independent processes. Add analysis, worker/VM startup, execution, and cancellation metrics as separate workloads before optimizing those paths. Do not claim an optimization until a diagnosed bottleneck is repeatably improved without contract regressions.
 - The compiler baseline measures parsing/compilation only. Add separate analysis and project-module workloads before optimizing type-checking or resolution.
 
 ## Limitations

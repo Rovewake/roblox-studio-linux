@@ -61,3 +61,23 @@ The table reports the median of the five process-level P50/P95 values. Peak RSS 
 | Place XML | 5,000 | 2,506.7 KiB | 172.34 / 514.44 | 199.22 / 610.62 | 572.81 / 1,712.98 | 36.8 (36.6–37.2) |
 
 XML is substantially slower than binary for this generated workload, and XML 5,000-Part P95 values vary widely across independent processes. This is a measured symptom, not a causal diagnosis: no profiler trace has identified which XML parsing, encoding, verification, filesystem, or scheduling work dominates. No optimization was made from the baseline. A follow-up must profile the measured path, preserve the fixture and hardware, repeat before/after measurements, and confirm semantic round trips before accepting any change. These synthetic results are not Studio parity, arbitrary-project coverage, or product SLOs.
+
+## Phase 3 Luau compiler baseline
+
+**Captured:** 2026-10-28 21:44 UTC.
+
+**Source revision:** [`d4c4703`](https://github.com/Rovewake/roblox-studio-linux/commit/d4c47039db5aef5868877018f5d7cf997450ce99); working tree was clean. Luau source is pinned to commit [`32c2808`](https://github.com/luau-lang/luau/commit/32c28089305f488f901aaf1dbf3fd1cb65fa3d11), release 0.744.
+
+**Host:** NixOS 26.05, Linux 6.18.57, x86_64; Intel Core i3-1215U (8 logical CPUs), 11.4 GiB RAM.
+
+**Build and method:** Release, Rust/Cargo 1.99.0, CMake 4.4.4, GCC 16.2.0. Deterministic generated scripts with 1,000, 10,000, or 50,000 lines; five warmups and 31 measured parse/compile operations in each of five independent processes; benchmark process priority `nice 10`. P95 uses nearest rank. RSS is Linux `/proc/self/status` `VmHWM`. Raw per-iteration values, source hashes, and host details are in [`phase3-luau-baseline.json`](phase3-luau-baseline.json).
+
+The table shows the median and min–max range of the five process-level statistics. Latencies are milliseconds; memory is KiB.
+
+| Source lines | Input bytes | Bytecode bytes | Compile P50 | Compile P95 | Peak RSS |
+|---:|---:|---:|---:|---:|---:|
+| 1,000 | 11,007 | 10,066 | 0.188 (0.177–0.198) | 0.246 (0.203–0.360) | 6,064 (5,992–6,076) |
+| 10,000 | 110,007 | 100,213 | 2.459 (2.406–2.487) | 2.659 (2.603–3.056) | 8,160 (8,084–8,364) |
+| 50,000 | 550,007 | 500,837 | 13.168 (12.568–13.316) | 14.049 (13.012–19.683) | 17,820 (17,756–17,864) |
+
+The 50,000-line P95 has the widest cross-process spread. This is a signal to repeat and profile only if that workload becomes a user-facing target; it does not identify a cause. No optimization was attempted. This workload measures synthetic parse/compile latency only; it excludes type analysis, editor responsiveness, runtime startup/execution, project loading, and physical desktop behavior. It is neither Studio parity nor a product SLO.
