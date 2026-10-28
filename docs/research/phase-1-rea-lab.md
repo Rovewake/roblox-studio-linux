@@ -1,8 +1,8 @@
 # Phase 1 REA lab and environment audit
 
 **Date:** 2026-10-28
-**Status:** version resolution, acquisition, and static package inventory complete; behavioral specification remains incomplete.
-**Scope:** record the REA setup, host/provider readiness, and the acquired Windows Studio reference package. This note contains no live Studio behavior observations. The downloaded binary was not executed.
+**Status:** version resolution, acquisition, and static package inventory complete; behavioral specifications remain in progress.
+**Scope:** record the REA setup, host/provider readiness, and the acquired Windows Studio reference package. The project has no Windows test environment, so this note contains no live Studio observations. The downloaded binary was not executed, and Windows execution is not a pending project setup task.
 
 ## REA source and version
 
@@ -39,18 +39,18 @@
 ## Static investigation
 
 - **Observation:** REA's Ghidra provider was configured ephemerally and its provider-specific checks passed. A read-only string search for `.rbxl` in `RobloxStudioBeta.exe` was attempted with `rea search ... --kind strings --provider ghidra`. The first run exceeded REA's 330-second import/analyze deadline; a retry with a 900-second startup timeout also ended with `provider_timeout`. Both results were explicitly incomplete and contain no usable search finding. No `OutOfMemoryError` was confirmed; a memory cause cannot be ruled out.
-- **Limitation:** the downloaded ZIP is a versioned package, not a live native Windows Studio session. No startup, open/save, hierarchy, property editor, Luau editor, viewport, undo/redo, or playtest behavior has been observed.
+- **Limitation:** the downloaded ZIP is a versioned package, not a live native Windows Studio session. No startup, open/save, hierarchy, property editor, Luau editor, viewport, undo/redo, or playtest behavior has been observed. Direct Windows tests are unavailable to this project and must not be treated as a future gate.
 - **Unknown:** GPU/driver behavior, runtime-loaded components, install-time state, user configuration, and behavior across Studio versions.
 
 ## Phase 1 gate assessment
 
-**Not passed.** Phase 1 has a repeatable, version-pinned download path, a recorded package provenance, and an initial static inventory. Its behavioral specification still needs reproducible observations from the original Studio running natively on Windows, followed by differential checks as the Linux implementation grows. The P0 workflows in `phase-1-p0-workflow-plan.md` remain investigation questions, not findings.
+**Not passed.** Phase 1 has a repeatable, version-pinned download path, recorded package provenance, and an initial static inventory. Its P0 behavior contracts and evidence notes are still incomplete. Build them from technical documentation, successful static evidence, public format specifications, fixtures, and creator feedback. Mark gaps as unknown; do not require or claim Windows tests. The P0 workflows in `phase-1-p0-workflow-plan.md` remain investigation questions, not findings.
 
 ## Next steps
 
-1. Obtain access to a native Windows Studio session for disposable local-project observation. Record Studio and Windows versions, GPU/driver, display settings, fixture hashes, and exact action sequences.
-2. Work through P0-01 to P0-08, recording observable outcomes and separating observations from interpretation and hypotheses.
-3. If a specific static question remains useful, retry with a narrower analyzer profile or a smaller binary; do not treat either timed-out result as evidence.
+1. Work through P0-01 to P0-08 using technical documents, static package evidence, public format specifications, and fixtures; separate observations from interpretation and hypotheses.
+2. If a specific static question remains useful, retry with a narrower analyzer profile or a smaller binary; do not treat either timed-out result as evidence.
+3. Build independent compatibility checks from documented contracts, public fixtures, and open-source implementations; state the coverage and limits of each.
 4. Before treating the acquisition script as update automation, revalidate the current client-version response schema and matching versioned archive behavior. Later add the scheduled GitHub Actions check described in `ROADMAP.md`; it must publish metadata only and must not retain Roblox binaries in GitHub storage.
 
 ## Sources

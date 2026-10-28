@@ -1,13 +1,14 @@
 # Roadmap: Native Roblox Studio for Linux
 
 **Status:** initial plan, based on research conducted on 2026-10-28
-**Goal:** port Roblox Studio to an application that runs natively on Linux, with functional compatibility and performance measured against equivalent workflows in original Studio. The project should also seek to outperform the original when a proven optimization preserves behavior.
+**Goal:** independently reimplement Roblox Studio workflows as a native Linux application. Establish compatibility from technical documentation, static evidence, public format specifications, fixtures, and creator feedback. Measure performance against Linux-defined workload goals and the port's own previous builds; direct Windows parity and performance claims are out of scope because this project has no Windows test environment.
 
 ## Assumptions and boundaries
 
 - The user states that they are authorized to analyze, modify, and port Studio/the engine, and that Roblox permits this kind of modification. This authorization is a project assumption; do not ask for confirmation again.
 - The solution must not use Wine, Proton, or Vinegar as a runtime, backend, dependency, or fallback. The final product must run as a native Linux program.
-- Studio source code is not in this repository. The plan is an independent implementation guided by observed behavior, technical specifications, REA, and differential tests. REA provides evidence; it does not automatically generate a port.
+- Studio source code is not in this repository. The plan is an independent implementation guided by technical specifications, REA static evidence, public format specifications, fixtures, and creator feedback. REA provides evidence; it does not automatically generate a port.
+- The project has no Windows machine or Windows test environment. Do not plan or gate work on executing Studio on Windows, Windows UI automation, or Windows-hosted test runners. The downloaded Windows package is for authorized static inspection only and must never be executed. Mark behavior that cannot be established from available evidence as unknown; do not claim direct behavioral, compatibility, or performance verification against a running Studio.
 - Do not access or research Roblox terms, rules, policies, legal pages, moderation, or other normative materials. Technical documentation for APIs, the engine, and formats may be consulted when needed.
 - The repository currently contains no product code, build system, benchmarks, or test corpus. Therefore, phases are ordered by dependency, without calendar estimates; estimates will be made after the Phase 0 technical spikes.
 - The long-term goal is full coverage of the Studio workflows inventoried by this project. Intermediate releases may have narrower scope, but must clearly state what works, what is partial, and what does not exist yet.
@@ -24,15 +25,15 @@ The port may be announced as complete only when:
 3. Handling supported projects does not silently lose data.
 4. The published performance, stability, and platform matrix has passed.
 5. Missing or partial features are identified; do not use “compatible” to mean “opens some projects.”
-6. Original Studio has served as a behavior reference and baseline without limiting the implementation to repeating its internal choices or inefficiencies.
+6. Every compatibility statement is tied to named technical evidence and its confidence. No claim relies on direct Windows execution, and unknown behavior remains explicitly identified.
 
 ```mermaid
 flowchart LR
-    A[Original Studio on Windows] --> B[Observation and REA evidence]
-    B --> C[Specifications and reference corpus]
+    A[Technical docs, REA static evidence, public formats, creator feedback] --> B[Evidence review and behavior hypotheses]
+    B --> C[Specifications and versioned fixture corpus]
     C --> D[Native Linux subsystems]
-    D --> E[Differential tests]
-    E --> F[Fidelity, stability, and performance gates]
+    D --> E[Fixture, contract, and independent-implementation checks]
+    E --> F[Evidence-labeled compatibility, stability, and performance gates]
     F -->|failed| D
     F -->|passed| G[Roadmap milestone]
 ```
@@ -59,7 +60,7 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 - Use CI runners only for claims they can verify. Generic hosted Linux runners can check software builds and headless tests; GPU, driver, Wayland/X11, and desktop integration coverage must use suitable labeled hardware or recorded manual runs.
 - The primary agent reviews every agent- or subagent-produced pull request and full diff, checks the relevant workflows and quality gates, and decides whether to merge, request changes, or reject it. Configure required status checks and main-branch protection where repository permissions allow; if they are unavailable, document and follow an equivalent review gate.
 - Make GitHub Releases the public distribution channel. Publish native, downloadable Linux artifacts for every supported Linux distribution and architecture, alongside source archives, checksums, dependency/license metadata, and clear release notes. This project is Linux-only: Windows and macOS are permanently outside its target platforms. Do not add builds for them or use Wine, Proton, or Vinegar.
-- Add a scheduled GitHub Actions update check for the official WindowsStudio64 LIVE version endpoint. Compare the returned upload ID with the metadata-only `docs/research/studio-reference-baseline.json`; open or update a version-specific tracking issue keyed by upload ID when it changes. Advance the baseline only after the new package has been acquired and inventoried, so an open update remains visible. Each new upload ID becomes a porting task owned by the primary agent: refresh the private reference, inspect changed components, update behavior evidence, re-run compatibility/performance checks, and revise the Linux implementation. The user supplies Studio experience feedback, not release engineering. The workflow may publish version metadata and hashes only; never retain or publish Roblox binaries in the repository, Actions artifacts, or caches. Run the check on demand as well as on a schedule.
+- Add a scheduled GitHub Actions update check for the official WindowsStudio64 LIVE version endpoint. Compare the returned upload ID with the metadata-only `docs/research/studio-reference-baseline.json`; open or update a version-specific tracking issue keyed by upload ID when it changes. Advance the baseline only after the new package has been acquired and inventoried, so an open update remains visible. Each new upload ID becomes a porting task owned by the primary agent: refresh the private reference, inspect changed components, update evidence, re-run Linux contract/compatibility and performance checks, and revise the implementation. The user supplies feedback on the Linux port, not release engineering. The workflow may publish version metadata and hashes only; never retain or publish Roblox binaries in the repository, Actions artifacts, or caches. Run the check on demand as well as on a schedule.
 
 ## Phases and gates
 
@@ -68,13 +69,13 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 **Goal:** replace assumptions with a measurable target before building expensive subsystems.
 
 - Build the Studio workflow inventory in `docs/compatibility/`, with P0/P1/P2 priority, steps, initial state, expected result, and dependencies.
-- Pin a version of original Studio as the reference. Record SHA-256 hashes of analyzed executables, the Windows system version used as the oracle, resolution/scale, GPU, driver, and relevant settings.
+- Pin a WindowsStudio64 package version for static inspection only. Record the upload ID and SHA-256 hashes of analyzed executables; do not plan a Windows OS, GPU, display, or live application baseline.
 - Set up reference Linux machines or sessions; target x86_64 first and choose the initial set of distributions, GPUs, and graphical sessions.
 - Define a Linux-only support matrix for releases, covering supported distributions, CPU architectures, GPUs, drivers, and desktop sessions. Identify suitable Linux CI runners and the build, install, and smoke checks needed before advertising each target.
 - Define the user-facing configuration surface and per-user storage locations using XDG Base Directory conventions where appropriate. Ensure the application can start from a clean user profile without files, credentials, or settings from the development machine.
 - Add a versioned Studio reference acquisition process: resolve the WindowsStudio64 LIVE version, fetch its matching ZIP into the private XDG cache, and record the channel, version/upload ID, archive SHA-256, size, ETag, and target hashes. Keep the metadata baseline in `docs/research/studio-reference-baseline.json` and all acquired Roblox files outside the public repository.
-- Record the original Studio baseline for equivalent workflows: cold/warm startup, open, save, switch tools, edit properties, run playtest, and navigate small, medium, and large scenes.
-- Treat this baseline as a comparison and regression guard, not a performance limit. After initial measurements, select at least one frequent P0 workflow for an optimization goal beyond parity.
+- Define repeatable Linux workloads for cold/warm startup, open, save, tool switching, property edits, playtest, and small/medium/large scenes. Establish the first measured native Linux build as the performance baseline.
+- Use absolute latency, frame-time, memory, reliability, and data-integrity goals on the declared Linux hardware matrix. Select frequent P0 workflows for measured optimization against the port's own baseline; do not claim superiority to Windows Studio.
 - Create ADRs comparing candidates for language, UI, renderer, scene storage, Luau integration, packaging, and plugin system. Do not lock in the stack before measuring a prototype with a large tree, long code, and a 3D viewport.
 - Build a minimal native Linux window and a rendering spike under Wayland and X11. Include no Windows runtime.
 - Audit the repository and add the initial GitHub Actions workflow for documentation and repository checks. Expand it with the chosen formatter, linter, tests, and native Linux build as those tools and code are introduced; define required checks for integration where GitHub settings permit.
@@ -86,17 +87,16 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 
 **Goal:** make REA usage repeatable and turn findings into traceable evidence.
 
-**Execution status (2026-10-28):** the current WindowsStudio64 LIVE package has been resolved, downloaded to the user's XDG cache, and inventoried read-only. Its version and hashes are recorded in [the REA lab audit](docs/research/phase-1-rea-lab.md). REA's Ghidra provider checks passed in a temporary environment, but full string searches of `RobloxStudioBeta.exe` timed out at 330 and 900 seconds without findings; REA's general doctor still classifies the NixOS host as unsupported. No native Windows Studio session is available for observing P0 workflows, so this phase's gate has not passed. See the [P0 workflow investigation plan](docs/research/phase-1-p0-workflow-plan.md).
+**Execution status (2026-10-28):** the current WindowsStudio64 LIVE package has been resolved, downloaded to the user's XDG cache, and inventoried read-only. Its version and hashes are recorded in [the REA lab audit](docs/research/phase-1-rea-lab.md). REA's Ghidra provider checks passed in a temporary environment, but full string searches of `RobloxStudioBeta.exe` timed out at 330 and 900 seconds without findings; REA's general doctor still classifies the NixOS host as unsupported. The project has no Windows test environment; behavioral claims must therefore come from documented technical sources, static evidence, fixtures, and creator feedback. This phase's gate has not passed because the P0 evidence notes and behavior specifications are incomplete, not because Windows access is expected. See the [P0 workflow investigation plan](docs/research/phase-1-p0-workflow-plan.md).
 
 - Configure REA and a native provider on the Linux host. Record REA, provider, and target versions and hashes in every report.
 - Resolve the current WindowsStudio64 LIVE version through the observed official client-version endpoint, then fetch the matching version-pinned RobloxStudio ZIP with `scripts/fetch_studio_reference.py`. Store the archive and extracted files only in the user's XDG cache outside the repository; validate the response length and ZIP CRC, record a local SHA-256 and ETag, and never execute or commit the binary. The endpoint is not documented as a stable public API, so validate its response schema and fail closed if it changes.
-- Inventory the Studio installation and binaries; identify components, dependencies, data files, strings, exports, and areas that remain unknown.
-- Investigate one question at a time. Follow an observable action through its implementation: input → function/caller → changed state or data → visible result.
-- Do not treat pseudocode as original source. Check instructions, callers/callees, constants, references, and observed behavior; classify every claim as observation, interpretation, inference, or unknown.
-- Create investigation notes for the main P0 workflows, with REA calls, evidence, limitations, version, and ways to refute the hypothesis.
-- Use the native Windows installation of Studio as the oracle for observation and comparison. The Linux implementation remains independent.
+- Inventory the versioned Studio package and binaries with read-only tools; identify components, dependencies, data files, strings, exports, and areas that remain unknown. Do not execute Windows binaries.
+- Investigate one specific technical question at a time. Follow static evidence such as instructions, callers/callees, constants, references, documented APIs, formats, and fixture behavior; an observable Windows action is unavailable to this project.
+- Do not treat pseudocode or strings as source code or proof of runtime behavior. Check independent evidence and classify every claim as observation, interpretation, inference, hypothesis, or unknown.
+- Create P0 evidence notes with source/version/hash, REA calls, reproducible fixture steps, limitations, confidence, and ways to refute the hypothesis. Write proposed behavior contracts from the evidence available; mark gaps as unknown instead of implying Windows validation.
 
-**Exit gate:** the selected Studio version and package provenance are recorded; every P0 workflow has a reproducible description, observed result, confidence level, and at least one differential test. Remaining questions are recorded rather than presented as facts.
+**Exit gate:** the selected Studio package version and provenance are recorded; every P0 workflow has a reproducible Linux acceptance contract, supporting evidence, confidence level, and fixture or independent-implementation check. Unknown behavior and unsupported claims are explicit. No Windows execution or comparison is required or claimed.
 
 ### Phase 2 — data model and project formats
 
@@ -106,7 +106,7 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 - Define an `Instance`/tree model, identity, references, properties, types, attributes, and unknown data. Preserve fields the app does not yet understand whenever the format allows it.
 - Implement reading first, then atomic writes with backup and recovery. An interrupted save must not leave the previous file truncated.
 - Create a versioned fixture corpus with simple cases, cross-references, optional properties, unknown data, large files, and malformed files. Each fixture must state its origin and hash; do not include private user data.
-- Test parse → serialize → parse for semantic equality and compare generated files with original Studio. Identical bytes are desirable when output is deterministic, but semantic equality and data preservation are the primary gate.
+- Test parse → serialize → parse for semantic equality. Compare supported cases with documented format specifications, versioned public fixtures, and independent open-source implementations such as `rbx-dom`; do not require files generated by Windows Studio. Identical bytes are desirable when output is deterministic, but semantic equality and data preservation are the primary gate.
 - Record coverage by format, property type, class, and read/write behavior. Explicitly reject corrupt or unsupported data when it cannot be safely preserved.
 
 **Exit gate:** 100% of P0 corpus cases open, save, and reopen with semantic equality; no supported field is lost; no unknown field is silently lost; invalid input produces controlled errors.
@@ -154,11 +154,11 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 
 - Define the boundary between the editor, DataModel, and playtest runtime; prevent editor actions from changing simulation state without an explicit rule.
 - Implement the scheduler/event loop, P0 services, physics, input, animation, audio, and runtime rendering in dependency order.
-- Assemble a suite of small experiences, each covering an Engine API capability and expected behavior in original Studio.
-- Compare deterministic results side by side: Instance tree, values, events, output, state when pausing/resuming, and behavior when stopping playtest.
+- Assemble a suite of small experiences, each covering an Engine API capability with expected behavior grounded in technical documentation and explicit project contracts. Label undocumented behavior as unknown.
+- Compare deterministic results against versioned expected outputs, public technical contracts, and independent implementations where available: Instance tree, values, events, output, pause/resume state, and stop-playtest state. Do not present these checks as comparison with Windows Studio.
 - Implement stop/cleanup, state isolation, execution limits, and error capture for problematic scripts.
 
-**Exit gate:** the P0 reference project set starts, runs, pauses, and exits correctly; differential results pass; no playtest changes the saved file without an explicit user action.
+**Exit gate:** the P0 reference project set starts, runs, pauses, and exits correctly against its documented contracts and expected outputs; no playtest changes the saved file without an explicit user action. Report unverified differences from Windows Studio as unknown.
 
 ### Phase 7 — production tools and ecosystem
 
@@ -200,7 +200,7 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 
 ## Metrics and measurement method
 
-The numeric targets below are **initial targets**, not current measurements. Recalibrate them in Phase 0 after running original Studio and the port on the same machine, with the same data and version. If a target changes, record the reason and new baseline; do not silently relax a failed gate.
+The numeric targets below are **initial targets**, not current measurements. Calibrate them in Phase 0 against repeatable Linux workloads and the declared Linux hardware matrix. The project has no Windows test environment, so no target may depend on a Windows Studio timing or resource baseline. If a target changes, record the reason and new baseline; do not silently relax a failed gate.
 
 A release cannot advance to beta or 1.0 with a red release gate. A P95 regression above 10% in a P0 operation blocks the release until it is reproduced, profiled, and fixed, or accepted in an ADR with its cause and impact documented. A single noisy result calls for another measurement, not an automatic exception.
 
@@ -210,15 +210,15 @@ A release cannot advance to beta or 1.0 with a red release gate. A P95 regressio
 | File integrity | Semantically equal round trips; supported fields lost; silent losses | 100% of P0 corpus cases pass; zero silent loss; zero corruption in save tests. |
 | Reliability | Crash-free beta sessions; successful launch/open/save; open critical defects | ≥99.5% crash-free sessions across at least 200 beta sessions; 0 open critical defects; 0 reproducible data loss. |
 | UI responsiveness | P95 for a common action (selection, property edit, opening a tab) | ≤100 ms on the reference project; long operations must show progress and not block input. |
-| Startup and operations | P50/P95 cold/warm startup, open, and save compared with native Studio | Initially ≤1.5× the equivalent baseline; goal before 1.0: ≤1.25×. If an operation has no equivalent, define and justify its own SLO. |
+| Startup and operations | P50/P95 cold/warm startup, open, and save against the native Linux build baseline and product SLO | Set absolute SLOs after the first instrumented Linux vertical slice; reduce P95 against the previous Linux release without violating functionality, data integrity, or supported-hardware limits. |
 | Viewport | P95 and P99 frame time in reference scenes; hitches >100 ms per minute | Initial target: 60 FPS on recommended hardware (P95 ≤16.7 ms), minimum 30 FPS on minimum hardware (P95 ≤33.3 ms); record p99 and hitches. |
-| Memory/CPU | PSS/RSS at idle and with P50/P90 scenes; idle CPU after warmup; soak growth | Working memory ≤1.5× the equivalent Windows baseline before beta and ≤1.25× before 1.0; idle CPU <3% of one logical core; no continuous growth after warmup. |
+| Memory/CPU | PSS/RSS at idle and with P50/P90 scenes; idle CPU after warmup; soak growth | Define absolute memory budgets for each supported Linux hardware tier after measuring the first vertical slice; idle CPU <3% of one logical core; no continuous growth after warmup. No ratio to Windows is claimed. |
 | Native Linux | Builds and smoke tests by distro, GPU, and graphical session | No Windows/Wine component in the runtime; 100% of announced environments pass P0 smoke workflows. |
 | User portability | Clean-profile install and launch; configuration and data-path behavior | 100% of advertised Linux environments work without author-specific files or settings; no hard-coded personal paths or credentials; user data locations and configuration are documented. |
 | Optimization discipline | Performance changes with diagnosis and reproducible comparison | 100% of accepted optimizations have before/after evidence beyond measurement variation; zero speculative optimization without an identified bottleneck. |
 | Build and release | Clean builds, artifacts, and reproducible dependencies for each advertised Linux distribution/architecture | Reproducible Linux x86_64 build from a clean checkout, plus passing native build/install checks for every additional advertised Linux distribution and architecture; dependencies and licenses inventoried; packages, checksums, and rollback documented. |
 
-The parity targets in the table are maximum acceptable limits for critical workflows, not the ideal result. After Phase 0, choose a frequent P0 workflow and set a 1.0 stretch goal of at least 20% lower P95 than original Studio, if measurements confirm a safe opportunity. If no proven opportunity exists, do not add artificial optimization just to hit that number; record the result and choose another workflow.
+The targets in the table are maximum acceptable limits for critical workflows, not the ideal result. After Phase 0, choose a frequent P0 workflow and set a 1.0 stretch goal of at least 20% lower P95 than the first measured Linux implementation, if profiles confirm a safe opportunity. This is an internal improvement target and makes no claim about speed relative to Windows Studio. If no proven opportunity exists, do not add artificial optimization just to hit that number; record the result and choose another workflow.
 
 ### Optimization policy — diagnose before changing
 
@@ -230,14 +230,14 @@ For each performance proposal, record the following in `benchmarks/` or an issue
 2. The machine, build, project/fixture, action sequence, and measurements before the change.
 3. A profile or trace that locates the cost; do not infer the bottleneck from code appearance alone.
 4. The causal hypothesis, primary metric, and secondary metrics that could get worse.
-5. The result after the change, repetitions, distribution/noise, and differential tests that protect behavior.
+5. The result after the change, repetitions, distribution/noise, and fixture, contract, or independent-implementation checks that protect behavior.
 6. The decision: keep, revert, or record an approved trade-off. If the gain does not exceed noise, revert or simplify.
 
 An optimization does not pass if it increases throughput in a microbenchmark but worsens the full workflow, P95/P99 tail, memory use, or data integrity beyond limits. Always compare the same build mode, dataset, and hardware; save the commit and results to detect future regressions.
 
 ### Benchmark protocol
 
-1. Record commit, build type, distro/kernel, CPU, GPU/driver, resolution/scale, graphical session, Studio oracle version, and dataset hashes.
+1. Record commit, build type, distro/kernel, CPU, GPU/driver, resolution/scale, graphical session, Studio package evidence version, and dataset hashes.
 2. Measure on the same hardware and projects. Separate cold and warm starts; run at least 5 warmups and 30 measurements per latency operation.
 3. Report median, P95, P99 when sample size allows, spread, and failure rate. Do not publish only the mean or a favorable run.
 4. Measure the viewport for 5 minutes per scene after warmup; include frame time, stutters, GPU use, memory, and temperature/clock where available.
@@ -257,7 +257,7 @@ An optimization does not pass if it increases throughput in a microbenchmark but
 ## Testing strategy
 
 - **Unit:** parser, serializer, Instance tree, references, types, and math operations.
-- **Differential:** run the same workflow and data in original Studio natively on Windows and in the Linux port; compare observable states with stated tolerances.
+- **Independent differential:** compare parser/runtime outputs against documented contracts, public golden fixtures, and independent implementations where they overlap. These checks do not establish parity with a running Windows Studio; keep claims scoped to the evidence tested.
 - **Golden files:** versioned and hashed fixtures for formats, properties, and scripts; explicit review when the target version changes.
 - **E2E:** create/open → edit → save → reopen → playtest → confirm state and logs.
 - **Fuzzing:** truncated inputs, extreme lengths, unknown types, cyclic/invalid graphs, and malformed assets; the parser must safely reject or preserve them, never hang or corrupt a file.
@@ -270,7 +270,7 @@ An optimization does not pass if it increases throughput in a microbenchmark but
 | Risk | What it looks like | Planned response |
 |---|---|---|
 | Large engine/API scope | Build UI without enough semantics or promise unsupported parity. | Prioritize workflows, maintain a versioned matrix, and complete vertical slices. |
-| Format changes and coverage gaps | Files open but data is discarded or rewritten incorrectly. | Differential corpus, preserve unknown fields, atomic saves, and gates requiring zero silent loss. |
+| Format changes and coverage gaps | Files open but data is discarded or rewritten incorrectly. | Public/documented format evidence, independent implementations, a versioned fixture corpus, unknown-field preservation, atomic saves, and gates requiring zero silent loss. |
 | Luau is not the engine | Scripts compile but depend on missing APIs, scheduler, or semantics. | Separate language, bindings, DataModel, and runtime; test each layer. |
 | Poor performance on large projects | UI pauses, frame drops, growing resource use. | Measure first, use P50/P90 scenes, profile, and optimize against bottlenecks. |
 | Driver and desktop variation | Crashes or inconsistent rendering across Wayland/X11 and vendors. | Published matrix, isolated renderer, documented native fallback, and redacted GPU logs. |

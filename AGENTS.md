@@ -22,7 +22,7 @@ This repository aims to port Roblox Studio to a **native Linux application** by 
 - The user delegates end-to-end technical execution to the agent. The agent is responsible for architecture, stack selection and maintenance, implementation, repository cleanup, justified removal of dead code and unused dependencies, quality gates, benchmarks, builds, and commits.
 - Do not hand routine engineering decisions to the user. Choose the most suitable technical option, record important decisions in ADRs, and proceed. Ask for guidance only when a product or user-experience decision is missing and cannot be inferred from feedback and context.
 - The user does not want to manage the stack, repository structure, cleanup, dependencies, dead code, or quality gates. Do not expect them to perform technical reviews or build operations for the agent.
-- The user's primary role is to try the original Studio and the port and report what feels bad, confusing, slow, or different. Turn that feedback into reproducible steps, a hypothesis, an appropriate metric or test, and a fix; then provide a version ready for another evaluation.
+- The project has no Windows machine or Windows test environment. The user's primary role is to try the Linux port when it is available and report what feels bad, confusing, slow, or different from the intended workflow. Turn that feedback into reproducible steps, a hypothesis, an appropriate metric or test, and a fix; then provide a version ready for another evaluation.
 - When work can be parallelized, delegate bounded tasks to subagents. The primary agent retains product context and integration responsibility. Read each subagent PR/diff in full, check architecture, scope, quality, tests, and performance, and decide whether to integrate, request changes, or reject it. Do not merge just because a subagent finished or checks are green.
 - Make atomic local commits, each containing one coherent change with relevant quality gates passing. Prefer Conventional Commits (`feat:`, `fix:`, `perf:`, `refactor:`, `test:`, `docs:`, `chore:`), with a scope when useful, for example `perf(viewport): reduce redundant redraws`. Do not combine unrelated changes or include user files, secrets, or proprietary artifacts.
 - Before cleaning up or removing code/dependencies, confirm that they are unused and that removal does not break builds, tests, or features. Record significant structural removals and run the quality gates relevant to the change.
@@ -35,8 +35,8 @@ This repository aims to port Roblox Studio to a **native Linux application** by 
 
 ## Native port strategy
 
-1. **Do not use Wine, Proton, or Vinegar as a runtime, backend, dependency, fallback, or product solution.** Do not redirect the goal toward “getting the Windows executable to work.” If the original behavior needs comparison, use an authorized native Windows installation of Studio; this project's implementation must continue to run natively on Linux.
-2. Treat the work as a clean reimplementation guided by observable behavior and evidence. Do not assume REA produces an automatic translation or a ready-to-port codebase.
+1. **Do not use Wine, Proton, or Vinegar as a runtime, backend, dependency, fallback, or product solution.** Do not redirect the goal toward “getting the Windows executable to work.” There is no Windows test environment for this project. Use available technical documentation, authorized static analysis, public format references, fixtures, and creator feedback; record unknown behavior and do not claim direct parity with a running Studio. The implementation must run natively on Linux.
+2. Treat the work as a clean reimplementation guided by technical documentation and available static evidence. Do not assume REA produces an automatic translation or a ready-to-port codebase.
 3. Divide Studio into workflows and subsystems that can be specified and delivered in stages, for example: opening/saving local projects, editing Luau, hierarchy/properties, 3D viewport, playtest, assets, authentication, collaboration, and publishing. Record scope, dependencies, status, and compatibility criteria for each item; start with a small local workflow. These stages are milestones toward porting the application, not an implied reduction of the goal to a partial demo.
 4. Separate responsibilities in the native implementation: project model and persistence, code editor, scene/viewport and renderer, playtest runtime, Roblox service integration, UI, and Linux desktop integration. Do not assign UI behavior that belongs to the project format, runtime, or a remote service.
 5. Prefer documented or open formats, libraries, APIs, and protocols. For undocumented formats or services, record evidence and technical uncertainty; the user's authorization to analyze and modify Studio is already established for this project. Do not distribute proprietary Studio executables, libraries, assets, or data in this repository.
@@ -45,10 +45,10 @@ This repository aims to port Roblox Studio to a **native Linux application** by 
 
 ## Evidence-based optimization
 
-- The port should seek better performance than the original Studio when possible without changing behavior observed by creators. Studio is a semantic reference and a performance baseline, not a ceiling or a template for inefficiencies to copy.
+- Seek performance improvements without changing documented or fixture-tested behavior. The original application's performance cannot be measured in this project; benchmark against repeatable Linux workloads and prior port builds, and do not claim the port is faster than Studio without a direct baseline.
 - Do not optimize based on preference, code appearance, or assumption. Before changing code for performance, reproduce and record a real bottleneck, workload, hardware, affected profile/metric, causal hypothesis, and expected result.
 - Measure before and after on the same hardware, build, project, and action sequence, with enough warmups and repetitions to characterize noise. Record the median and relevant tails (P95/P99), plus CPU, memory, GPU, or I/O as appropriate to the hypothesis.
-- Accept an optimization only when its gain is repeatable and exceeds measurement variation, and differential tests confirm functionality and data fidelity are preserved. If there is no measurable gain, revert it or explain the trade-off in an ADR.
+- Accept an optimization only when its gain is repeatable and exceeds measurement variation, and contract, fixture, or independent-implementation checks confirm functionality and data fidelity are preserved. If there is no measurable gain, revert it or explain the trade-off in an ADR.
 - Do not trade a local improvement for a hidden regression in another metric. Report every P0 workflow regression and keep it within the roadmap's performance limits.
 
 ## Responsible use of REA
@@ -58,19 +58,19 @@ This repository aims to port Roblox Studio to a **native Linux application** by 
 - Use REA only on software the user owns or is authorized to examine, as described in the [project's responsible-use notice](https://github.com/morluto/rea/blob/main/DISCLAIMER.md). For Roblox Studio in this project, the user has already stated the authorization; do not ask again.
 - REA analysis runs locally, but results received by the agent may be sent to the model provider. Do not include credentials, tokens, cookies, private account data, private places, or user files in prompts, captures, or reports. Redact logs before storing or sharing them.
 - Begin with static, read-only inspection. For an installation folder, use `inspect_desktop_application` to inventory components and get next steps. For a native binary, use a provider supported on the host and follow the [native analysis guide](https://rea.tools/guides/native/). On Linux, the guide lists Hopper and Ghidra; confirm current requirements and support before choosing.
-- Treat pseudocode and automated classification as clues, not truth. Confirm interpretations with instructions, callers/callees, references, strings, constants, normal application observation, and, when possible, an independent public source.
+- Treat pseudocode and automated classification as clues, not truth. Confirm interpretations with instructions, callers/callees, references, strings, constants, and independent technical sources. No live Studio observation is available in this project.
 - Explicitly distinguish **observation**, **interpretation**, **inference**, **hypothesis**, and **unknown**. An absence in partial analysis does not prove a feature does not exist. Preserve result provenance, including REA/provider version, target path, Studio version, and SHA-256 hash of the analyzed binary.
-- Use dynamic capture only when the question requires it. It may execute or interact with the target under the user's permissions; use an isolated test profile, disposable files, and a session without sensitive data. Do not automate login, publishing, or changes to real projects.
+- Do not run or dynamically capture the Windows Studio target. The project has no Windows test environment; use read-only static analysis and document unknown runtime behavior.
 - Do not use REA to bypass authentication, licensing, anti-cheat, or other protections. Use its analysis tools read-only; implement the port in this project's code. Do not copy pseudocode, decompiled code, proprietary resources, or assets into the native implementation. For any target outside Roblox Studio and the scope authorized by the user, clarify authorization before analyzing it.
 
 ## Investigation and implementation workflow
 
-1. **Record the baseline.** Note the question, reproduction steps, expected/current result, system, GPU/driver, graphics backend, Studio/runtime versions, and executable hash. Use a copy of a test project.
-2. **Choose a specific question.** Examples: “which component fails before the window appears?” or “which path does Studio use to load plugins?” Give the agent the file and exact behavior to explain; ask for evidence and limitations with the answer.
-3. **Inspect and follow evidence.** Start with the installation inventory. When needed, inspect the PE and follow one function or reference at a time. When a decompiled view does not explain arguments or effects, consult instructions and callers and compare with observed behavior.
+1. **Record the baseline.** For Linux behavior, note the question, reproduction steps, expected/current result, system, GPU/driver, graphics backend, build/runtime versions, and fixture hash. For static Studio analysis, note package version, binary hash, provider, and the precise question. Use disposable fixtures.
+2. **Choose a specific question.** Examples: “which imports does this executable declare?” or “which documented format fields does this binary reference?” Give the agent the file and exact static question to answer; ask for evidence and limitations with the answer.
+3. **Inspect and follow evidence.** Start with the package inventory. When needed, inspect the PE and follow one function or reference at a time. When a decompiled view does not explain arguments or effects, consult instructions, callers, technical documentation, public format references, and fixtures. The target is not executed.
 4. **Write a testable hypothesis.** Identify the likely layer and state what would confirm or refute it. Keep conclusions about original Studio separate from conclusions about the native implementation, graphics system, and Linux libraries.
 5. **Implement a native vertical slice.** Deliver one usable task end to end, with a Linux UI, original logic, persistence, and error handling. Preserve existing data and use disposable copies for experiments.
-6. **Verify against the original target.** When technically possible, compare the same workflow and data in original Studio running natively on Windows and in the Linux port. Use deterministic tests and disposable data; record versions, limits, and unresolved differences.
+6. **Verify the Linux implementation.** Compare behavior with documented technical contracts, deterministic fixtures, and independent implementations where available. These checks validate only the stated contracts; they do not establish direct parity with Windows Studio. Record versions, evidence limits, and unresolved differences.
 7. **Update the evidence note.** Store durable findings in `docs/research/` (create the directory when needed), with sources, hashes, and reproducible steps. Do not turn a hypothesis into fact when summarizing it.
 
 Research note template:
@@ -84,7 +84,7 @@ Direct observations and evidence references:
 Interpretation and confidence:
 Open hypotheses:
 Confirmation/refutation test:
-Result on Windows and Linux:
+Result on Linux and independent references:
 Limitations and redacted data:
 ```
 

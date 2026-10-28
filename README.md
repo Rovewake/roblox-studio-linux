@@ -1,6 +1,6 @@
 # Native Roblox Studio for Linux
 
-A project to port Roblox Studio to a native Linux application. The long-term goal is to cover Studio workflows independently, with behavior and compatibility verified; running the Windows program through a compatibility layer is outside the project's goal.
+A project to independently reimplement Roblox Studio workflows as a native Linux application. Compatibility claims will be limited to technical documentation, static evidence, public format specifications, fixtures, and Linux tests. This project has no Windows test environment, so it cannot make direct behavior or performance comparisons with a running Studio. Running the Windows program through a compatibility layer is outside the project's goal.
 
 This is intended to become a distributable tool for Linux creators beyond the repository owner. It must work across its documented Linux support matrix and must not depend on the author's machine, account, or local file layout.
 
@@ -10,8 +10,9 @@ The project is in the planning and research stage. There is no application code,
 
 ## Principles
 
-- Use original Studio on Windows as a behavior reference, not a performance ceiling.
-- Guide investigation with REA, traceable evidence, and differential tests.
+- Use technical documentation, static package inspection, public format specifications, traceable fixtures, and creator feedback to define behavior; mark unsupported assumptions as unknown.
+- Verify contracts with Linux tests and independent implementations where available. Do not claim direct Windows parity.
+- Measure performance against Linux workload targets and previous port builds; do not claim the port is faster than Studio.
 - Prevent silent data loss and avoid optimizations without diagnosis and before/after measurements.
 - Keep the implementation and runtime native to Linux.
 - Use portable defaults and user configuration; do not hard-code developer-specific paths, credentials, accounts, or hardware assumptions.
