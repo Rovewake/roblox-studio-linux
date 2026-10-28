@@ -48,6 +48,17 @@ Maintain a `compatibility-matrix.csv` or equivalent from Phase 0 onward. Each ro
 
 These are proposed priorities. Phase 0 must confirm them through a workflow inventory and creator impact. The technical Engine API index already lists hundreds of classes and enums; prioritize by workflow and observed usage rather than implementing every class in alphabetical order.
 
+## Repository ownership and GitHub automation
+
+- The primary agent owns technical repository work end to end: architecture and stack decisions, repository structure, cleanup, dependency management, justified removal of dead code, quality gates, builds, benchmarks, documentation, GitHub workflows, and atomic commits. Do not hand routine repository or engineering operations to the user.
+- Keep the repository maintainable from the beginning: establish ignore rules, formatting conventions, dependency and license inventory, documentation layout, and architecture decision records as they become relevant. Remove code or dependencies only after confirming they are unused and the applicable quality gates still pass.
+- Build CI incrementally in the .github/workflows directory. Start with checks that apply to the current repository, then add formatting, linting, tests, native Linux builds, and packaging checks as the stack and product code are introduced. Run relevant checks for pushes and pull requests, and make failures visible before integration.
+- Keep workflows reproducible and maintainable: pin third-party actions to reviewed immutable revisions, grant only the permissions each job needs, avoid exposing secrets to untrusted pull-request code, and cache dependencies with keys tied to lockfiles and toolchain versions.
+- Add dependency update, vulnerability, license, and secret-scanning automation when supported by the chosen stack and GitHub configuration. Triage its findings and fix or document them; do not let automated updates bypass review or quality gates.
+- Use CI runners only for claims they can verify. Generic hosted Linux runners can check software builds and headless tests; GPU, driver, Wayland/X11, and desktop integration coverage must use suitable labeled hardware or recorded manual runs.
+- The primary agent reviews every agent- or subagent-produced pull request and full diff, checks the relevant workflows and quality gates, and decides whether to merge, request changes, or reject it. Configure required status checks and main-branch protection where repository permissions allow; if they are unavailable, document and follow an equivalent review gate.
+- At release time, add a GitHub release workflow that validates tags, builds the declared Linux artifacts reproducibly, runs release checks, records checksums and dependency/license metadata, and publishes clear notes and known limitations.
+
 ## Phases and gates
 
 ### Phase 0 — baseline, scope, and architecture decisions
@@ -61,9 +72,10 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 - Treat this baseline as a comparison and regression guard, not a performance limit. After initial measurements, select at least one frequent P0 workflow for an optimization goal beyond parity.
 - Create ADRs comparing candidates for language, UI, renderer, scene storage, Luau integration, packaging, and plugin system. Do not lock in the stack before measuring a prototype with a large tree, long code, and a 3D viewport.
 - Build a minimal native Linux window and a rendering spike under Wayland and X11. Include no Windows runtime.
+- Audit the repository and add the initial GitHub Actions workflow for documentation and repository checks. Expand it with the chosen formatter, linter, tests, and native Linux build as those tools and code are introduced; define required checks for integration where GitHub settings permit.
 - Create `docs/decisions/`, `docs/research/`, `tests/fixtures/`, and `benchmarks/` when the code structure begins.
 
-**Exit gate:** P0/P1/P2 scope reviewed; reproducible baseline; stack ADRs approved; prototype opens and renders natively in reference Linux environments; no unresolved major architectural blocker without a plan.
+**Exit gate:** P0/P1/P2 scope reviewed; reproducible baseline; stack ADRs approved; prototype opens and renders natively in reference Linux environments; initial repository checks pass in GitHub Actions; no unresolved major architectural blocker without a plan.
 
 ### Phase 1 — REA lab and behavioral specification
 
@@ -171,6 +183,7 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 - Fix measured bottlenecks; attach profiles and before/after benchmarks for rendering, memory, parsing, or VM optimizations.
 - Do not tune without a diagnosis. Every performance change must identify a reproducible bottleneck, causal hypothesis, profile, and before/after result; improvement indistinguishable from noise does not justify added complexity.
 - Choose Linux packaging (Flatpak, distribution package, or another method) in an ADR with clear update, file permission, desktop integration, and rollback behavior.
+- Complete the GitHub release workflow for the selected package formats, including clean-checkout builds, release gates, checksums, dependency/license metadata, and release notes. Do not claim hardware coverage from runners that do not match the supported GPU and desktop matrix.
 - Publish actual requirements, compatibility matrix, known limitations, crash reporting process, and release notes.
 
 **Exit gate:** all P0, stability, and performance gates are green; no critical data-loss defect remains; the support matrix and limitations match what was actually tested.
