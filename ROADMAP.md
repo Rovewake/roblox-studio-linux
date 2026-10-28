@@ -59,6 +59,7 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 - Use CI runners only for claims they can verify. Generic hosted Linux runners can check software builds and headless tests; GPU, driver, Wayland/X11, and desktop integration coverage must use suitable labeled hardware or recorded manual runs.
 - The primary agent reviews every agent- or subagent-produced pull request and full diff, checks the relevant workflows and quality gates, and decides whether to merge, request changes, or reject it. Configure required status checks and main-branch protection where repository permissions allow; if they are unavailable, document and follow an equivalent review gate.
 - Make GitHub Releases the public distribution channel. Publish native, downloadable Linux artifacts for every supported Linux distribution and architecture, alongside source archives, checksums, dependency/license metadata, and clear release notes. This project is Linux-only: Windows and macOS are permanently outside its target platforms. Do not add builds for them or use Wine, Proton, or Vinegar.
+- Add a scheduled GitHub Actions update check for the official WindowsStudio64 LIVE version endpoint. Compare the returned upload ID with the metadata-only `docs/research/studio-reference-baseline.json`; open or update a version-specific tracking issue keyed by upload ID when it changes. Advance the baseline only after the new package has been acquired and inventoried, so an open update remains visible. Each new upload ID becomes a porting task owned by the primary agent: refresh the private reference, inspect changed components, update behavior evidence, re-run compatibility/performance checks, and revise the Linux implementation. The user supplies Studio experience feedback, not release engineering. The workflow may publish version metadata and hashes only; never retain or publish Roblox binaries in the repository, Actions artifacts, or caches. Run the check on demand as well as on a schedule.
 
 ## Phases and gates
 
@@ -71,6 +72,7 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 - Set up reference Linux machines or sessions; target x86_64 first and choose the initial set of distributions, GPUs, and graphical sessions.
 - Define a Linux-only support matrix for releases, covering supported distributions, CPU architectures, GPUs, drivers, and desktop sessions. Identify suitable Linux CI runners and the build, install, and smoke checks needed before advertising each target.
 - Define the user-facing configuration surface and per-user storage locations using XDG Base Directory conventions where appropriate. Ensure the application can start from a clean user profile without files, credentials, or settings from the development machine.
+- Add a versioned Studio reference acquisition process: resolve the WindowsStudio64 LIVE version, fetch its matching ZIP into the private XDG cache, and record the channel, version/upload ID, archive SHA-256, size, ETag, and target hashes. Keep the metadata baseline in `docs/research/studio-reference-baseline.json` and all acquired Roblox files outside the public repository.
 - Record the original Studio baseline for equivalent workflows: cold/warm startup, open, save, switch tools, edit properties, run playtest, and navigate small, medium, and large scenes.
 - Treat this baseline as a comparison and regression guard, not a performance limit. After initial measurements, select at least one frequent P0 workflow for an optimization goal beyond parity.
 - Create ADRs comparing candidates for language, UI, renderer, scene storage, Luau integration, packaging, and plugin system. Do not lock in the stack before measuring a prototype with a large tree, long code, and a 3D viewport.
@@ -84,16 +86,17 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 
 **Goal:** make REA usage repeatable and turn findings into traceable evidence.
 
-**Execution status (2026-10-28):** the initial REA/host audit is documented, but this phase's gate has not passed. The current NixOS host is outside REA's documented Linux support boundary, and no Studio reference installation is accessible. See [the REA lab audit](docs/research/phase-1-rea-lab.md) and [the P0 workflow investigation plan](docs/research/phase-1-p0-workflow-plan.md).
+**Execution status (2026-10-28):** the current WindowsStudio64 LIVE package has been resolved, downloaded to the user's XDG cache, and inventoried read-only. Its version and hashes are recorded in [the REA lab audit](docs/research/phase-1-rea-lab.md). REA's Ghidra provider checks passed in a temporary environment, while REA's general doctor still classifies the NixOS host as unsupported. No native Windows Studio session is available for observing P0 workflows, so this phase's gate has not passed. See the [P0 workflow investigation plan](docs/research/phase-1-p0-workflow-plan.md).
 
 - Configure REA and a native provider on the Linux host. Record REA, provider, and target versions and hashes in every report.
+- Resolve the current WindowsStudio64 LIVE version through the observed official client-version endpoint, then fetch the matching version-pinned RobloxStudio ZIP with `scripts/fetch_studio_reference.py`. Store the archive and extracted files only in the user's XDG cache outside the repository; validate the response length and ZIP CRC, record a local SHA-256 and ETag, and never execute or commit the binary. The endpoint is not documented as a stable public API, so validate its response schema and fail closed if it changes.
 - Inventory the Studio installation and binaries; identify components, dependencies, data files, strings, exports, and areas that remain unknown.
 - Investigate one question at a time. Follow an observable action through its implementation: input → function/caller → changed state or data → visible result.
 - Do not treat pseudocode as original source. Check instructions, callers/callees, constants, references, and observed behavior; classify every claim as observation, interpretation, inference, or unknown.
 - Create investigation notes for the main P0 workflows, with REA calls, evidence, limitations, version, and ways to refute the hypothesis.
 - Use the native Windows installation of Studio as the oracle for observation and comparison. The Linux implementation remains independent.
 
-**Exit gate:** every P0 workflow has a reproducible description, expected result, confidence level, and at least one planned differential test. Remaining questions are recorded rather than presented as facts.
+**Exit gate:** the selected Studio version and package provenance are recorded; every P0 workflow has a reproducible description, observed result, confidence level, and at least one differential test. Remaining questions are recorded rather than presented as facts.
 
 ### Phase 2 — data model and project formats
 
@@ -302,6 +305,8 @@ Research reviewed on 2026-10-28. The pages below are technical sources or public
 
 - [Official Luau site](https://luau.org/) and [Luau repository](https://github.com/luau-lang/luau) — embeddable language, compiler/VM, and type system. Luau alone does not implement Roblox Engine.
 - [Roblox Engine API Reference](https://create.roblox.com/docs/reference/engine) — technical reference for classes, types, enums, members, and release notes. Coverage should be indexed by version.
+- [Roblox Studio setup documentation](https://create.roblox.com/docs/studio/setup) and [Studio CLI documentation](https://create.roblox.com/docs/studio/cli) — technical installation and command-line references.
+- [WindowsStudio64 LIVE version endpoint](https://clientsettings.roblox.com/v2/client-version/WindowsStudio64/channel/LIVE) — the observed version resolver used to locate a matching archive. It is not treated as a stable documented API; validate its schema and archive mapping before each automated update check.
 - [rbx-dom](https://github.com/rojo-rbx/rbx-dom) — Rust libraries for DOM/serialization; the project documents XML and binary format reading/writing and publishes an explicit per-type coverage table.
 - [Roblox binary file format specification](https://github.com/RobloxAPI/spec/blob/master/formats/rbxl.md) — community specification for the binary format with references to reverse engineering efforts; use it alongside differential fixtures, not as a guarantee of complete compatibility.
 - [Rojo](https://github.com/rojo-rbx/rojo) — public reference for file-based workflows, Git, scripts/models, and synchronization. The project itself identifies conversion/sync areas that still need configuration; it is not equivalent to full Studio.

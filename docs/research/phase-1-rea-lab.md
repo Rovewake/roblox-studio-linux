@@ -1,44 +1,57 @@
 # Phase 1 REA lab and environment audit
 
 **Date:** 2026-10-28
-**Status:** initial source and host audit complete; REA/provider setup and Studio behavior investigation remain blocked.
-**Scope:** record verified REA requirements and the current analysis environment. No Roblox Studio binary was analyzed, and no Studio behavior is claimed as an observation in this note.
+**Status:** version resolution, acquisition, and static package inventory complete; behavioral specification remains incomplete.
+**Scope:** record the REA setup, host/provider readiness, and the acquired Windows Studio reference package. This note contains no live Studio behavior observations. The downloaded binary was not executed.
 
 ## REA source and version
 
-- The latest published REA release checked for this audit is `rea-agents-6.8.0`, published on 2026-10-25. Confirm the release again before a later setup because REA changes frequently. [REA releases](https://github.com/morluto/rea/releases/tag/rea-agents-6.8.0)
-- The official package requires Node.js 22.23.4+, 24.22.1+, or 26.12.1+, plus npm. The host Node.js is 24.21.0, below the supported 24.x minimum. Read-only REA CLI checks were run using Node.js 26.12.1 and npm 11.20.0 from a temporary Nix shell; no system or user profile was changed for this runtime. [REA README](https://github.com/morluto/rea/blob/main/README.md)
+- The latest published REA release checked for this audit is `rea-agents-6.8.0`, published on 2026-10-25. Recheck the release before later setup because REA changes frequently. [REA releases](https://github.com/morluto/rea/releases/tag/rea-agents-6.8.0)
+- The official package requires Node.js 22.23.4+, 24.22.1+, or 26.12.1+, plus npm. The host Node.js is 24.21.0, below the supported 24.x minimum. Read-only REA CLI operations were run using Node.js 26.12.1 and npm 11.20.0 from temporary Nix shells; no system or user profile was changed for this runtime. [REA README](https://github.com/morluto/rea/blob/main/README.md)
 - REA's Linux process supervisor needs a procps-compatible `ps`. This host has procps-ng 4.0.6.
-- The host is NixOS 26.05, x86_64. REA 6.8.0's `doctor --json` reports `unsupported_host`: its published Linux host support targets distributions with a recognized apt, dnf, or pacman package family. Therefore, this host is outside REA's documented support boundary even though Node.js and `ps` are available. [REA installation and setup](https://github.com/morluto/rea/blob/main/docs/installation.md)
+- The host is NixOS 26.05, x86_64. REA 6.8.0's general `doctor --json` check reports `unsupported_host`: its documented Linux host support targets distributions with a recognized apt, dnf, or pacman package family. This is a host-support limitation; it did not prevent the read-only package inventory or scoped Ghidra provider check below. [REA installation and setup](https://github.com/morluto/rea/blob/main/docs/installation.md)
 
 ## Provider readiness
 
-- Ghidra is the preferred free native-analysis provider for this project. REA documents Ghidra 12.1.x and a 64-bit JDK 21 or newer on Linux. The queried Nixpkgs package versions are Ghidra 12.1.4 and JDK 21.0.12.1+1, but neither is installed or configured on this host. The REA doctor reports `GHIDRA_INSTALL_DIR` unset and Ghidra unavailable. [REA native analysis guide](https://rea.tools/guides/native/)
-- Hopper is not selected: its automated Linux setup is documented only for a specific set of x86_64 distributions, and REA treats its installation as a separate approval. This NixOS host is not on that list.
-- The host has no IDA registration. No provider has been installed, selected, or invoked.
+- REA's native guide lists Ghidra 12.1.x and a 64-bit JDK 21 or newer on Linux. A temporary Nix shell provided Ghidra 12.1.4 and JDK 21.0.12.1+1. REA's provider-scoped doctor checks passed for Ghidra, Java, Linux/x64, and the native decompiler. The tools were not installed to the user profile. [REA native analysis guide](https://rea.tools/guides/native/)
+- The general REA doctor still reports NixOS as outside its supported host boundary. Treat provider availability on this host as an exploratory result, not a claim that REA supports NixOS.
+- Hopper was not selected: its automated Linux setup is documented for a narrower set of x86_64 distributions, and it is unnecessary for this initial investigation. The host has no IDA registration.
 
 ## REA setup review
 
 - Ran the official `rea-agents@6.8.0` Codex setup in dry-run mode with `--client codex --dry-run --json`.
-- The reviewed plan would add an REA MCP registration to the user's Codex configuration and install REA's shared workflow instructions. The plan was not applied: the current host is outside REA's supported host boundary, no native provider is configured, and the target installation is unavailable.
-- `rea doctor --json` confirmed Node.js 26.12.1 readiness, but reported the host as unsupported, Ghidra unavailable, and the REA Codex registration/skill missing. No Codex configuration or skill files were modified.
-- REA's built-in `inspect_desktop_application` can inventory an available installation directory without a native provider and without running the application. It reads directory entries, selected headers, and bounded metadata; it does not change target files. [Desktop application inspection](https://github.com/morluto/rea/blob/main/docs/desktop-applications.md)
+- The reviewed plan would add an REA MCP registration to the user's Codex configuration and install REA's shared workflow instructions. The plan was not applied; the direct CLI was sufficient for this read-only investigation, and setup would modify user-level agent configuration.
+- REA's `inspect_desktop_application` inventory was run against the extracted package directory. It read 14 files, probed 9 files, inspected 3,060 bytes, found zero symlinks, and reported zero components, candidates, or next probes. This is a limited result for the downloaded ZIP payload, not a full Windows installation inventory or evidence that the application has no further components. The evidence bundle is kept in the private reference cache.
 
-## Target availability
+## Windows Studio reference acquisition
 
-- A read-only search of the workspace and available home/removable-media locations found no Roblox Studio Windows installation or `RobloxStudioBeta.exe` target.
-- No native Windows Studio session is connected to this Linux workspace. The reference Studio version, executable hashes, install inventory, GPU/driver, and observed workflows are therefore unknown.
-- No Windows compatibility runtime was used. No target binary was downloaded, executed, or analyzed.
+- **Observation:** the official client-version endpoint `https://clientsettings.roblox.com/v2/client-version/WindowsStudio64/channel/LIVE` returned version `0.745.0.7451137` and upload ID `version-7062aec9dbe74b14` on 2026-10-28. The endpoint is empirically observed and is not documented here as a stable public API.
+- **Observation:** the version-pinned archive URL was `https://setup.rbxcdn.com/version-7062aec9dbe74b14-RobloxStudio.zip`. The download completed over HTTPS with 120,313,638 bytes and passed ZIP CRC validation.
+- **Observation:** locally calculated archive SHA-256: `804414bb9b99a7149bd914a4226da043c6eba7faa57bbf01a52bc68ed729280a`.
+- **Observation:** archive ETag was `"fc8b526fe17bf6e88e6394cb48cc1bfa"`. This is recorded as an HTTP validator, not as a cryptographic checksum.
+- **Observation:** extracted `RobloxStudioBeta.exe` SHA-256: `781b36ed6fb62e61292b9e6a64327280c7da12b00f3ea8b2c91a3f4834f860ec`.
+- Acquisition and extraction were performed by `scripts/fetch_studio_reference.py` into the user's XDG cache under `roblox-studio-linux/studio-reference/`. No archive or extracted proprietary file is tracked by Git.
+- Re-run from the repository root with `python3 scripts/fetch_studio_reference.py --channel LIVE`; use `--download-only` to retain the archive without extraction. The script re-resolves the selected channel each time and creates a version-specific cache directory.
+- The metadata-only version baseline is recorded in `studio-reference-baseline.json`; scheduled update checks should compare upload IDs against this file and leave all downloaded content in the private cache.
+- The script was run a second time and correctly reused the verified local cache. The manifest records the endpoint response, channel, version/upload ID, archive URL, ETag, sizes, hashes, ZIP CRC result, and executable hash.
+- The download was not executed. No Windows compatibility runtime was used. Do not infer runtime dependencies or interactive behavior from the archive alone.
+
+## Static investigation
+
+- **Observation:** REA's Ghidra provider was configured ephemerally and its provider-specific checks passed. A read-only string search for `.rbxl` in `RobloxStudioBeta.exe` was started with `rea search ... --kind strings --provider ghidra`. The first run exceeded REA's 330-second import/analyze deadline and returned an incomplete `provider_timeout`, with no search finding. A retry using the documented 900-second startup timeout is in progress; neither attempt is treated as evidence until it completes successfully.
+- **Limitation:** the downloaded ZIP is a versioned package, not a live native Windows Studio session. No startup, open/save, hierarchy, property editor, Luau editor, viewport, undo/redo, or playtest behavior has been observed.
+- **Unknown:** GPU/driver behavior, runtime-loaded components, install-time state, user configuration, and behavior across Studio versions.
 
 ## Phase 1 gate assessment
 
-**Not passed.** The REA sources and host requirements are documented, but the native provider is not ready under the current host's support status, and the Studio reference installation is unavailable. There are no Studio-specific observations or REA evidence to report yet. Do not promote the workflow plans in `phase-1-p0-workflow-plan.md` to findings until they have been checked against the original application.
+**Not passed.** Phase 1 has a repeatable, version-pinned download path, a recorded package provenance, and an initial static inventory. Its behavioral specification still needs reproducible observations from the original Studio running natively on Windows, followed by differential checks as the Linux implementation grows. The P0 workflows in `phase-1-p0-workflow-plan.md` remain investigation questions, not findings.
 
-## Requirements to resume
+## Next steps
 
-1. Make a native Windows Studio reference installation available for read-only inventory and live observation of local, disposable projects.
-2. Provide an analysis host within REA's documented Linux support boundary, or another REA-supported analysis environment that can access the installation files. It needs Node.js at a supported version, npm, procps-compatible `ps`, Ghidra 12.1.x, and 64-bit JDK 21 or newer.
-3. Re-run `rea doctor --json`, review and apply the exact Codex setup plan on that supported host, then record REA/provider/target versions and hashes before investigation.
+1. Finish the bounded read-only Ghidra query and record its output, provider version, binary hash, and limitations if it succeeds.
+2. Obtain access to a native Windows Studio session for disposable local-project observation. Record Studio and Windows versions, GPU/driver, display settings, fixture hashes, and exact action sequences.
+3. Work through P0-01 to P0-08, recording observable outcomes and separating observations from interpretation and hypotheses.
+4. Before treating the acquisition script as update automation, revalidate the current client-version response schema and matching versioned archive behavior. Later add the scheduled GitHub Actions check described in `ROADMAP.md`; it must publish metadata only and must not retain Roblox binaries in GitHub storage.
 
 ## Sources
 
@@ -47,3 +60,6 @@
 - [REA installation and setup](https://github.com/morluto/rea/blob/main/docs/installation.md)
 - [REA native analysis guide](https://rea.tools/guides/native/)
 - [REA desktop application inspection](https://github.com/morluto/rea/blob/main/docs/desktop-applications.md)
+- [Roblox Studio setup documentation](https://create.roblox.com/docs/studio/setup) — technical installation documentation.
+- [Roblox Studio CLI documentation](https://create.roblox.com/docs/studio/cli) — technical reference for Studio's command-line interface and installation paths.
+- [Observed WindowsStudio64 LIVE version endpoint](https://clientsettings.roblox.com/v2/client-version/WindowsStudio64/channel/LIVE) — direct technical endpoint queried for this reference; not assumed to be a stable public API.
