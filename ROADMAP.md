@@ -1,296 +1,296 @@
-# Roadmap: Roblox Studio nativo para Linux
+# Roadmap: Native Roblox Studio for Linux
 
-**Status:** plano inicial, baseado em pesquisa feita em 28/10/2026
-**Objetivo:** portar o Roblox Studio para uma aplicação que execute nativamente em Linux, com compatibilidade funcional e desempenho medidos contra fluxos equivalentes no Studio original. O projeto também deve buscar superar o original em desempenho quando houver uma otimização comprovada que preserve o comportamento.
+**Status:** initial plan, based on research conducted on 2026-10-28
+**Goal:** port Roblox Studio to an application that runs natively on Linux, with functional compatibility and performance measured against equivalent workflows in original Studio. The project should also seek to outperform the original when a proven optimization preserves behavior.
 
-## Premissas e limites
+## Assumptions and boundaries
 
-- O usuário declara que tem autorização para analisar, modificar e portar o Studio/engine e que a Roblox permite esse tipo de modificação. Essa autorização é uma premissa do projeto; não pedir confirmação novamente.
-- A solução não pode usar Wine, Proton ou Vinegar como runtime, backend, dependência ou fallback. O produto final deve executar como programa nativo de Linux.
-- O código-fonte do Studio não está no repositório. O plano é uma implementação independente orientada por comportamento observado, especificações técnicas, REA e testes diferenciais. REA fornece evidências; não gera um port automático.
-- É proibido acessar ou pesquisar termos, regras, políticas, páginas legais, moderação ou materiais normativos da Roblox. Consultas à documentação técnica de APIs, engine e formatos são permitidas quando necessárias.
-- O repositório atualmente não contém código de produto, sistema de build, benchmarks nem corpus de teste. Portanto, as fases são ordenadas por dependência, sem estimativas de calendário; estimativas serão feitas depois dos spikes técnicos da Fase 0.
-- O objetivo de longo prazo é a cobertura integral do Studio inventariada neste projeto. Entregas intermediárias podem ter escopo menor, mas devem declarar claramente o que funciona, o que está parcial e o que ainda não existe.
+- The user states that they are authorized to analyze, modify, and port Studio/the engine, and that Roblox permits this kind of modification. This authorization is a project assumption; do not ask for confirmation again.
+- The solution must not use Wine, Proton, or Vinegar as a runtime, backend, dependency, or fallback. The final product must run as a native Linux program.
+- Studio source code is not in this repository. The plan is an independent implementation guided by observed behavior, technical specifications, REA, and differential tests. REA provides evidence; it does not automatically generate a port.
+- Do not access or research Roblox terms, rules, policies, legal pages, moderation, or other normative materials. Technical documentation for APIs, the engine, and formats may be consulted when needed.
+- The repository currently contains no product code, build system, benchmarks, or test corpus. Therefore, phases are ordered by dependency, without calendar estimates; estimates will be made after the Phase 0 technical spikes.
+- The long-term goal is full coverage of the Studio workflows inventoried by this project. Intermediate releases may have narrower scope, but must clearly state what works, what is partial, and what does not exist yet.
 
-## Definição de sucesso
+## Definition of success
 
-Não chamar o projeto de port funcional só porque abre uma janela ou mostra uma cena. A cada marco, deve existir uma fatia vertical utilizável — abrir ou criar um projeto, editar, salvar, reabrir e verificar o resultado — e critérios de compatibilidade e desempenho aprovados.
+Do not call the project a functional port just because it opens a window or displays a scene. Each milestone must deliver a usable vertical slice—open or create a project, edit it, save it, reopen it, and verify the result—with approved compatibility and performance criteria.
 
-O port só pode ser anunciado como completo quando:
+The port may be announced as complete only when:
 
-1. Todo fluxo de usuário inventariado tiver status explícito e teste de aceitação.
-2. Todos os fluxos críticos estiverem aprovados em Linux nativo.
-3. O tratamento de projetos suportados não perder dados silenciosamente.
-4. A matriz de desempenho, estabilidade e plataformas anunciada estiver aprovada.
-5. Funcionalidades ausentes ou parciais estiverem identificadas; não usar “compatível” como sinônimo de “abre alguns projetos”.
-6. O Studio original tiver servido como referência de comportamento e baseline, sem limitar a implementação a repetir suas escolhas internas ou ineficiências.
+1. Every inventoried user workflow has an explicit status and acceptance test.
+2. All critical workflows pass on native Linux.
+3. Handling supported projects does not silently lose data.
+4. The published performance, stability, and platform matrix has passed.
+5. Missing or partial features are identified; do not use “compatible” to mean “opens some projects.”
+6. Original Studio has served as a behavior reference and baseline without limiting the implementation to repeating its internal choices or inefficiencies.
 
 ```mermaid
 flowchart LR
-    A[Studio original no Windows] --> B[Observação e evidências REA]
-    B --> C[Especificações e corpus de referência]
-    C --> D[Subsistemas nativos Linux]
-    D --> E[Testes diferenciais]
-    E --> F[Gates de fidelidade, estabilidade e desempenho]
-    F -->|falhou| D
-    F -->|aprovado| G[Marco do roadmap]
+    A[Original Studio on Windows] --> B[Observation and REA evidence]
+    B --> C[Specifications and reference corpus]
+    C --> D[Native Linux subsystems]
+    D --> E[Differential tests]
+    E --> F[Fidelity, stability, and performance gates]
+    F -->|failed| D
+    F -->|passed| G[Roadmap milestone]
 ```
 
-## Prioridade inicial de funcionalidades
+## Initial feature priorities
 
-Manter um `compatibility-matrix.csv` ou equivalente desde a Fase 0. Cada linha representa um fluxo ou capacidade, não apenas uma classe da API. Campos mínimos: identificador, prioridade, versão-alvo, evidência, implementação, teste, estado, limitações e responsável.
+Maintain a `compatibility-matrix.csv` or equivalent from Phase 0 onward. Each row represents a workflow or capability, not just an API class. Minimum fields: identifier, priority, target version, evidence, implementation, test, status, limitations, and owner.
 
-| Prioridade | Escopo inicial | Critério de aceitação |
+| Priority | Initial scope | Acceptance criteria |
 |---|---|---|
-| **P0 — núcleo local** | Iniciar o app; criar/abrir/salvar/fechar projeto local; navegar pela hierarquia; selecionar e editar propriedades comuns; editar, analisar e salvar scripts Luau; viewport interativo; undo/redo; playtest local básico. | Cada fluxo passa de ponta a ponta no Linux e não danifica o arquivo de origem. |
-| **P1 — produção** | Arquivos binários e XML, cenas maiores, ferramentas de transformação, depuração, assets, terreno, animação, áudio, preferências, autosave, importação/exportação e plugins selecionados. | Suporte medido por recurso, formato e fixture; nenhuma alegação de compatibilidade sem teste. |
-| **P2 — paridade avançada** | Colaboração, conta e serviços remotos, publicação, integração avançada com assets, plugins mais complexos e demais fluxos identificados no inventário. | Cada integração tem contrato técnico, tratamento de falha e testes próprios; estado reportado separadamente. |
+| **P0 — local core** | Launch the app; create/open/save/close a local project; navigate the hierarchy; select and edit common properties; edit, analyze, and save Luau scripts; interactive viewport; undo/redo; basic local playtest. | Every workflow passes end to end on Linux and does not damage the source file. |
+| **P1 — production** | Binary and XML files, larger scenes, transform tools, debugging, assets, terrain, animation, audio, preferences, autosave, import/export, and selected plugins. | Support is measured by feature, format, and fixture; no compatibility claim without a test. |
+| **P2 — advanced parity** | Collaboration, account and remote services, publishing, advanced asset integration, more complex plugins, and other workflows found in the inventory. | Each integration has a technical contract, failure handling, and its own tests; report its status separately. |
 
-Os itens acima são prioridades propostas. A Fase 0 deve confirmá-las com inventário de workflows e impacto para criadores. O índice técnico da Engine API já lista centenas de classes e enums; priorizar por workflow e uso observado, não tentando implementar cada classe em ordem alfabética.
+These are proposed priorities. Phase 0 must confirm them through a workflow inventory and creator impact. The technical Engine API index already lists hundreds of classes and enums; prioritize by workflow and observed usage rather than implementing every class in alphabetical order.
 
-## Fases e gates
+## Phases and gates
 
-### Fase 0 — baseline, escopo e decisões de arquitetura
+### Phase 0 — baseline, scope, and architecture decisions
 
-**Objetivo:** substituir suposições por um alvo mensurável antes de construir subsistemas caros.
+**Goal:** replace assumptions with a measurable target before building expensive subsystems.
 
-- Montar o inventário de workflows do Studio em `docs/compatibility/`, com prioridade P0/P1/P2, passos, estado inicial, resultado esperado e dependências.
-- Fixar uma versão do Studio original para referência. Registrar SHA-256 dos executáveis analisados, versão do sistema Windows usado como oracle, resolução/escala, GPU, driver e configurações relevantes.
-- Montar máquinas ou sessões de referência Linux; declarar primeiro x86_64 e escolher o conjunto inicial de distribuições, GPUs e sessões gráficas.
-- Registrar baseline do Studio original nos workflows equivalentes: início frio/morno, abrir, salvar, trocar de ferramenta, editar propriedades, executar o playtest e navegar por cenas pequenas, médias e grandes.
-- Tratar esse baseline como comparação e proteção contra regressão, não como limite de desempenho. Definir após as primeiras medições pelo menos um workflow P0 frequente para meta de otimização além da paridade.
-- Criar ADRs comparando candidatos para linguagem, UI, renderer, armazenamento de cena, integração de Luau, packaging e sistema de plugins. Não fixar stack antes de medir um protótipo com árvore grande, código longo e viewport 3D.
-- Fazer uma janela nativa Linux mínima e um spike de renderização sob Wayland e X11. Não incluir nenhum runtime Windows.
-- Criar `docs/decisions/`, `docs/research/`, `tests/fixtures/` e `benchmarks/` quando a estrutura do código começar.
+- Build the Studio workflow inventory in `docs/compatibility/`, with P0/P1/P2 priority, steps, initial state, expected result, and dependencies.
+- Pin a version of original Studio as the reference. Record SHA-256 hashes of analyzed executables, the Windows system version used as the oracle, resolution/scale, GPU, driver, and relevant settings.
+- Set up reference Linux machines or sessions; target x86_64 first and choose the initial set of distributions, GPUs, and graphical sessions.
+- Record the original Studio baseline for equivalent workflows: cold/warm startup, open, save, switch tools, edit properties, run playtest, and navigate small, medium, and large scenes.
+- Treat this baseline as a comparison and regression guard, not a performance limit. After initial measurements, select at least one frequent P0 workflow for an optimization goal beyond parity.
+- Create ADRs comparing candidates for language, UI, renderer, scene storage, Luau integration, packaging, and plugin system. Do not lock in the stack before measuring a prototype with a large tree, long code, and a 3D viewport.
+- Build a minimal native Linux window and a rendering spike under Wayland and X11. Include no Windows runtime.
+- Create `docs/decisions/`, `docs/research/`, `tests/fixtures/`, and `benchmarks/` when the code structure begins.
 
-**Gate de saída:** escopo P0/P1/P2 revisado; baseline reproduzível; ADRs de stack aprovados; protótipo abre e renderiza nativamente nos ambientes Linux de referência; nenhum bloqueio arquitetural grave sem plano.
+**Exit gate:** P0/P1/P2 scope reviewed; reproducible baseline; stack ADRs approved; prototype opens and renders natively in reference Linux environments; no unresolved major architectural blocker without a plan.
 
-### Fase 1 — laboratório REA e especificação comportamental
+### Phase 1 — REA lab and behavioral specification
 
-**Objetivo:** tornar o uso do REA repetível e transformar descobertas em evidência rastreável.
+**Goal:** make REA usage repeatable and turn findings into traceable evidence.
 
-- Configurar REA e provider nativo no host Linux. Registrar versões do REA, provider, alvo e hashes em cada relatório.
-- Inventariar a instalação e os binários do Studio; identificar componentes, dependências, arquivos de dados, strings, exports e áreas ainda desconhecidas.
-- Investigar uma pergunta por vez. Seguir uma ação observável por sua implementação: entrada → função/caller → estado ou dado alterado → resultado visível.
-- Não tratar pseudocódigo como fonte original. Conferir instruções, callers/callees, constantes, referências e comportamento observado; classificar cada afirmação como observação, interpretação, inferência ou desconhecido.
-- Criar notas de investigação para os principais workflows P0, com chamadas REA, evidência, limites, versão e formas de refutar a hipótese.
-- Usar a instalação nativa do Studio no Windows como oracle para observação e comparação. A implementação Linux continua independente.
+- Configure REA and a native provider on the Linux host. Record REA, provider, and target versions and hashes in every report.
+- Inventory the Studio installation and binaries; identify components, dependencies, data files, strings, exports, and areas that remain unknown.
+- Investigate one question at a time. Follow an observable action through its implementation: input → function/caller → changed state or data → visible result.
+- Do not treat pseudocode as original source. Check instructions, callers/callees, constants, references, and observed behavior; classify every claim as observation, interpretation, inference, or unknown.
+- Create investigation notes for the main P0 workflows, with REA calls, evidence, limitations, version, and ways to refute the hypothesis.
+- Use the native Windows installation of Studio as the oracle for observation and comparison. The Linux implementation remains independent.
 
-**Gate de saída:** cada workflow P0 tem descrição reproduzível, resultado esperado, nível de confiança e pelo menos um teste diferencial planejado. As dúvidas restantes estão registradas, sem serem escondidas como fatos.
+**Exit gate:** every P0 workflow has a reproducible description, expected result, confidence level, and at least one planned differential test. Remaining questions are recorded rather than presented as facts.
 
-### Fase 2 — modelo de dados e formatos de projeto
+### Phase 2 — data model and project formats
 
-**Objetivo:** ler e salvar projetos sem perda silenciosa antes de conectar a UI e o runtime.
+**Goal:** read and save projects without silent data loss before connecting the UI and runtime.
 
-- Prototipar `rbx-dom` como candidato: ele é Rust, tem serializadores para `rbxl`, `rbxm`, `rbxlx` e `rbxmx`, mas sua própria tabela de cobertura mostra tipos ainda não implementados. Validar lacunas e licença antes de adotar, encapsular ou substituir partes.
-- Definir um modelo de `Instance`/árvore, identidade, referências, propriedades, tipos, atributos e dados desconhecidos. Preservar campos que o app ainda não entende sempre que o formato permitir.
-- Implementar leitura primeiro, depois escrita atômica com backup e recuperação. Um save interrompido não pode deixar o arquivo anterior truncado.
-- Criar corpus versionado de fixtures com casos simples, referências cruzadas, propriedades opcionais, dados desconhecidos, arquivos grandes e arquivos malformados. Cada fixture deve indicar origem e hash; não incluir dados privados de usuário.
-- Testar parse → serialize → parse por igualdade semântica e comparar arquivos gerados com o Studio original. Bytes idênticos são desejáveis quando determinísticos, mas igualdade semântica e preservação de dados são o gate principal.
-- Registrar cobertura por formato, tipo de propriedade, classe e comportamento de leitura/escrita. Rejeitar explicitamente dados corrompidos ou não suportados quando não houver preservação segura.
+- Prototype `rbx-dom` as a candidate: it is written in Rust and has serializers for `rbxl`, `rbxm`, `rbxlx`, and `rbxmx`, but its own coverage table shows types that are not yet implemented. Validate gaps and license before adopting it, wrapping it, or replacing parts.
+- Define an `Instance`/tree model, identity, references, properties, types, attributes, and unknown data. Preserve fields the app does not yet understand whenever the format allows it.
+- Implement reading first, then atomic writes with backup and recovery. An interrupted save must not leave the previous file truncated.
+- Create a versioned fixture corpus with simple cases, cross-references, optional properties, unknown data, large files, and malformed files. Each fixture must state its origin and hash; do not include private user data.
+- Test parse → serialize → parse for semantic equality and compare generated files with original Studio. Identical bytes are desirable when output is deterministic, but semantic equality and data preservation are the primary gate.
+- Record coverage by format, property type, class, and read/write behavior. Explicitly reject corrupt or unsupported data when it cannot be safely preserved.
 
-**Gate de saída:** 100% dos casos P0 do corpus abrem, salvam e reabrem com igualdade semântica; zero campo suportado é perdido; zero perda silenciosa de campo desconhecido; erros de entrada inválida são controlados.
+**Exit gate:** 100% of P0 corpus cases open, save, and reopen with semantic equality; no supported field is lost; no unknown field is silently lost; invalid input produces controlled errors.
 
-### Fase 3 — Luau, reflexão e ferramentas de código
+### Phase 3 — Luau, reflection, and code tools
 
-**Objetivo:** entregar edição de scripts com semântica Luau real, sem confundir a linguagem com o Roblox Engine.
+**Goal:** deliver script editing with real Luau semantics without conflating the language with Roblox Engine.
 
-- Avaliar o runtime/compiler oficial Luau como dependência embutida. Luau fornece linguagem, compilador, VM e APIs de embedding; não fornece por si só `Instance`, serviços Roblox, scheduler, physics ou comportamento de Studio.
-- Integrar parser, formatter/linter quando compatíveis, diagnósticos, navegação, autocomplete, type checking e depuração em etapas.
-- Construir bindings da engine sobre o modelo de dados com testes para propriedades, métodos, eventos, callbacks, coroutines e erros.
-- Separar o editor de código da VM e da API de engine. Permitir que scripts sem runtime completo continuem editáveis e claramente classificados.
-- Usar os testes e benchmarks do projeto Luau como baseline de linguagem; adicionar corpus de scripts reais autorizados e fixtures de compatibilidade.
+- Evaluate the official Luau runtime/compiler as an embedded dependency. Luau provides the language, compiler, VM, and embedding APIs; by itself it does not provide `Instance`, Roblox services, a scheduler, physics, or Studio behavior.
+- Integrate a parser, formatter/linter where compatible, diagnostics, navigation, autocomplete, type checking, and debugging in stages.
+- Build engine bindings on the data model, with tests for properties, methods, events, callbacks, coroutines, and errors.
+- Separate the code editor from the VM and engine API. Allow scripts to remain editable and clearly labeled even when the full runtime is unavailable.
+- Use Luau project's tests and benchmarks as the language baseline; add a corpus of authorized real scripts and compatibility fixtures.
 
-**Gate de saída:** scripts Luau de referência analisam/compilam como esperado; diagnostics têm localização estável; execução não trava a UI; APIs ausentes produzem erros claros em vez de comportamento inventado.
+**Exit gate:** reference Luau scripts parse/compile as expected; diagnostics have stable locations; execution does not block the UI; missing APIs produce clear errors instead of invented behavior.
 
-### Fase 4 — shell de desktop e edição de projeto
+### Phase 4 — desktop shell and project editing
 
-**Objetivo:** construir a experiência de trabalho nativa e a primeira fatia vertical real.
+**Goal:** build the native work experience and the first real vertical slice.
 
-- Implementar janela, documentos/tabs, atalhos, preferências, menus e layout persistente.
-- Entregar hierarquia/Explorer, inspetor de propriedades, seleção, operações comuns, undo/redo e edição de scripts.
-- Abrir um projeto local, modificar uma propriedade e um script, salvar, fechar, reabrir e recuperar exatamente as alterações.
-- Adicionar autosave, salvamento atômico, indicador de alterações não salvas, aviso de falha e recuperação de sessão sem sobrescrever o original.
-- Validar foco, IME, escala HiDPI, múltiplos monitores, teclado e navegação acessível nos desktops Linux selecionados.
+- Implement the window, documents/tabs, shortcuts, preferences, menus, and persistent layout.
+- Deliver hierarchy/Explorer, property inspector, selection, common operations, undo/redo, and script editing.
+- Open a local project, modify a property and a script, save, close, reopen, and recover the exact changes.
+- Add autosave, atomic saving, an unsaved-changes indicator, failure warnings, and session recovery without overwriting the original.
+- Validate focus, IME, HiDPI scaling, multiple monitors, keyboard, and accessible navigation on selected Linux desktops.
 
-**Gate de saída:** todos os fluxos P0 locais de projeto passam em E2E; nenhum comando destrutivo ocorre sem confirmação ou undo; projeto reabre após encerramento forçado usando o recovery path.
+**Exit gate:** all local P0 project workflows pass E2E; no destructive command runs without confirmation or undo; a project can be reopened after a forced shutdown through the recovery path.
 
-### Fase 5 — viewport e edição 3D
+### Phase 5 — viewport and 3D editing
 
-**Objetivo:** editar cenas no renderer Linux com latência e fidelidade previsíveis.
+**Goal:** edit scenes in the Linux renderer with predictable latency and fidelity.
 
-- Escolher e registrar renderer/API gráfica a partir dos ADRs da Fase 0; isolar backend para não acoplar o modelo de dados à GPU.
-- Implementar câmera, seleção/picking, transformações, gizmos, grade, materiais e iluminação prioritários.
-- Adicionar importação e visualização de assets com limites de tamanho e erros recuperáveis.
-- Otimizar por cena: culling, batching, atualização incremental, cache e carregamento assíncrono somente quando profiling mostrar o gargalo.
-- Testar GPU Intel, AMD e NVIDIA e sessões Wayland/X11 nos alvos declarados. Capturar crash, shader compile hitch, frame time e consumo de memória.
+- Choose and record the renderer/graphics API based on Phase 0 ADRs; isolate the backend so the data model is not coupled to the GPU.
+- Implement prioritized camera, selection/picking, transforms, gizmos, grid, materials, and lighting.
+- Add asset import and viewing with size limits and recoverable errors.
+- Optimize per scene: use culling, batching, incremental updates, caching, and asynchronous loading only when profiling identifies the bottleneck.
+- Test Intel, AMD, and NVIDIA GPUs and Wayland/X11 sessions on declared targets. Capture crashes, shader compile hitches, frame time, and memory use.
 
-**Gate de saída:** fluxos P0 de viewport passam na matriz principal; cena representativa mantém o orçamento de frame time; nenhuma operação na viewport bloqueia a thread da UI por mais que o limite definido.
+**Exit gate:** P0 viewport workflows pass on the primary matrix; a representative scene stays within its frame-time budget; no viewport operation blocks the UI thread beyond the defined limit.
 
-### Fase 6 — runtime local, simulação e playtest
+### Phase 6 — local runtime, simulation, and playtest
 
-**Objetivo:** permitir testar uma experiência local com semântica previsível.
+**Goal:** allow a local experience to be tested with predictable semantics.
 
-- Definir fronteira entre editor, DataModel e runtime de playtest; evitar que uma ação do editor altere o estado da simulação sem uma regra explícita.
-- Implementar em ordem de dependência o scheduler/event loop, serviços P0, física, input, animação, áudio e rendering em runtime.
-- Montar suite de experiências pequenas, cada qual cobrindo uma capacidade do Engine API e um comportamento esperado no Studio original.
-- Comparar lado a lado resultados determinísticos: árvore de Instances, valores, eventos, output, estado ao pausar/retomar e comportamento ao parar o playtest.
-- Implementar stop/cleanup, isolamento de estado, limites de execução e captura de erros para scripts problemáticos.
+- Define the boundary between the editor, DataModel, and playtest runtime; prevent editor actions from changing simulation state without an explicit rule.
+- Implement the scheduler/event loop, P0 services, physics, input, animation, audio, and runtime rendering in dependency order.
+- Assemble a suite of small experiences, each covering an Engine API capability and expected behavior in original Studio.
+- Compare deterministic results side by side: Instance tree, values, events, output, state when pausing/resuming, and behavior when stopping playtest.
+- Implement stop/cleanup, state isolation, execution limits, and error capture for problematic scripts.
 
-**Gate de saída:** conjunto P0 de projetos de referência inicia, executa, pausa e encerra corretamente; resultados diferenciais passam; nenhum playtest altera o arquivo salvo sem uma ação explícita do usuário.
+**Exit gate:** the P0 reference project set starts, runs, pauses, and exits correctly; differential results pass; no playtest changes the saved file without an explicit user action.
 
-### Fase 7 — ferramentas de produção e ecossistema
+### Phase 7 — production tools and ecosystem
 
-**Objetivo:** preencher os fluxos P1 e expandir a compatibilidade com projetos existentes.
+**Goal:** cover P1 workflows and expand compatibility with existing projects.
 
-- Expandir arquivos e tipos avançados; assets, terreno, animações, áudio, ferramentas de depuração e import/export.
-- Avaliar compatibilidade de plugins por categoria. Compatibilidade declarada precisa de testes de API e UI; plugin não suportado deve falhar com diagnóstico claro.
-- Usar Rojo e `rbx-dom` como referências públicas para fluxos com filesystem, scripts versionáveis e sincronização; não confundir essas ferramentas com uma implementação completa do Studio.
-- Manter o índice de API por versão e gerar relatórios de propriedades/tipos com cobertura, testes e estados de implementação.
+- Expand support for advanced files and types; assets, terrain, animation, audio, debugging tools, and import/export.
+- Evaluate plugin compatibility by category. Any compatibility claim needs API and UI tests; an unsupported plugin must fail with a clear diagnostic.
+- Use Rojo and `rbx-dom` as public references for filesystem workflows, versionable scripts, and synchronization; do not confuse these tools with a complete Studio implementation.
+- Maintain a versioned API index and generate property/type reports with coverage, tests, and implementation status.
 
-**Gate de saída:** todos os recursos anunciados como P1 têm fixtures e testes; cada formato tem cobertura documentada; plugins anunciados passaram em uma matriz de compatibilidade publicada.
+**Exit gate:** all features announced as P1 have fixtures and tests; every format has documented coverage; announced plugins have passed a published compatibility matrix.
 
-### Fase 8 — serviços online e colaboração
+### Phase 8 — online services and collaboration
 
-**Objetivo:** integrar fluxos remotos depois que os fluxos locais e o runtime forem confiáveis.
+**Goal:** integrate remote workflows after local workflows and the runtime are reliable.
 
-- Inventariar autenticação, bibliotecas de assets, busca, sync, colaboração, cloud projects e publicação com documentação técnica disponível e evidências REA autorizadas.
-- Isolar serviços atrás de interfaces testáveis. Usar respostas gravadas ou fakes para testes; não misturar estado online com edição local.
-- Tratar expiração de sessão, falhas de rede, conflitos, retries, rate limits e cancelamento sem perder trabalho local.
-- Redigir tokens, cookies, IDs privados e dados de conta dos logs e fixtures.
-- Não pesquisar materiais normativos da Roblox; a permissão do usuário registrada neste projeto continua sendo a premissa.
+- Inventory authentication, asset libraries, search, sync, collaboration, cloud projects, and publishing using available technical documentation and authorized REA evidence.
+- Isolate services behind testable interfaces. Use recorded responses or fakes for tests; do not mix online state with local editing.
+- Handle session expiration, network failures, conflicts, retries, rate limits, and cancellation without losing local work.
+- Redact tokens, cookies, private IDs, and account data from logs and fixtures.
+- Do not research Roblox normative materials; the user's permission recorded in this project remains the assumption.
 
-**Gate de saída:** cada fluxo online tem testes com sucesso, falha, timeout, conflito e retomada; perda de conexão nunca apaga alterações locais; nenhum segredo aparece em logs ou relatórios.
+**Exit gate:** every online workflow has tests for success, failure, timeout, conflict, and recovery; a lost connection never deletes local changes; no secret appears in logs or reports.
 
-### Fase 9 — estabilização, performance e distribuição
+### Phase 9 — stabilization, performance, and distribution
 
-**Objetivo:** liberar somente quando métricas de fidelidade, estabilidade, performance e instalação forem atingidas.
+**Goal:** release only after fidelity, stability, performance, and installation metrics have passed.
 
-- Rodar regressão completa no corpus, matriz de hardware e fluxos P0/P1/P2 anunciados.
-- Rodar sessões longas, abrir/salvar repetidamente, carregar projetos grandes e encerrar abruptamente durante cada fase do save.
-- Corrigir os gargalos medidos; anexar profile e benchmark antes/depois para otimizações de render, memória, parsing ou VM.
-- Não fazer tuning sem diagnóstico. Cada mudança de performance precisa apontar um gargalo reproduzível, hipótese causal, perfil e resultado antes/depois; melhoria não distinguível do ruído não justifica complexidade extra.
-- Definir packaging Linux (Flatpak, pacote de distribuição ou outra forma) em ADR com atualização, permissões de arquivo, integração desktop e rollback claros.
-- Publicar requisitos reais, matriz de compatibilidade, limitações conhecidas, processo de reportar crash e release notes.
+- Run full regression on the corpus, hardware matrix, and announced P0/P1/P2 workflows.
+- Run long sessions, repeatedly open/save, load large projects, and force shutdown during every save stage.
+- Fix measured bottlenecks; attach profiles and before/after benchmarks for rendering, memory, parsing, or VM optimizations.
+- Do not tune without a diagnosis. Every performance change must identify a reproducible bottleneck, causal hypothesis, profile, and before/after result; improvement indistinguishable from noise does not justify added complexity.
+- Choose Linux packaging (Flatpak, distribution package, or another method) in an ADR with clear update, file permission, desktop integration, and rollback behavior.
+- Publish actual requirements, compatibility matrix, known limitations, crash reporting process, and release notes.
 
-**Gate de saída:** todos os gates P0, estabilidade e performance estão verdes; não há defeito crítico de perda de dados; a matriz de suporte e limitações corresponde ao que foi realmente testado.
+**Exit gate:** all P0, stability, and performance gates are green; no critical data-loss defect remains; the support matrix and limitations match what was actually tested.
 
-## Métricas e método de medição
+## Metrics and measurement method
 
-As metas numéricas abaixo são **metas iniciais**, não medições atuais. Recalibrar na Fase 0 depois de executar o Studio original e o port na mesma máquina, com os mesmos dados e versão. Se uma meta for alterada, registrar motivo e nova linha de base; não relaxar silenciosamente um gate que falhou.
+The numeric targets below are **initial targets**, not current measurements. Recalibrate them in Phase 0 after running original Studio and the port on the same machine, with the same data and version. If a target changes, record the reason and new baseline; do not silently relax a failed gate.
 
-Uma versão não avança para beta ou 1.0 com gate de release vermelho. Regressão P95 superior a 10% em operação P0 bloqueia a entrega até ser reproduzida, perfilada e corrigida ou aceita em ADR com causa e impacto documentados. Um resultado isolado ruidoso pede nova medição, não uma exceção automática.
+A release cannot advance to beta or 1.0 with a red release gate. A P95 regression above 10% in a P0 operation blocks the release until it is reproduced, profiled, and fixed, or accepted in an ADR with its cause and impact documented. A single noisy result calls for another measurement, not an automatic exception.
 
-| Área | Métrica | Gate de release |
+| Area | Metric | Release gate |
 |---|---|---|
-| Cobertura funcional | Workflows com estado, prioridade, evidência e teste; taxa de aprovação dos P0 | 100% dos P0 aprovados; toda feature restante explicitamente suportada, parcial ou ausente. |
-| Integridade de arquivos | Round trips semanticamente iguais; campos suportados perdidos; perdas silenciosas | 100% dos casos P0 do corpus passam; zero perda silenciosa; zero corrupção em save test. |
-| Confiabilidade | Crash-free sessions em beta; sucesso de iniciar/abrir/salvar; falhas críticas abertas | ≥99,5% de sessões sem crash em pelo menos 200 sessões beta; 0 defeitos críticos abertos; 0 perda de dados reproduzível. |
-| Responsividade UI | P95 de ação comum (seleção, propriedade, abrir tab) | ≤100 ms em projeto de referência; operação longa deve mostrar progresso e não bloquear input. |
-| Startup e operações | P50/P95 de início frio/morno, abrir e salvar, comparados ao Studio nativo | Inicialmente ≤1,5× a linha de base equivalente; objetivo antes do 1.0: ≤1,25×. Se a operação não tiver equivalente, definir SLO próprio e justificar. |
-| Viewport | P95 e P99 de frame time em cenas de referência; hitches >100 ms por minuto | Meta inicial 60 FPS no hardware recomendado (P95 ≤16,7 ms), mínimo 30 FPS no hardware mínimo (P95 ≤33,3 ms); registrar p99 e hitches. |
-| Memória/CPU | PSS/RSS no idle e com cenas P50/P90; CPU idle após aquecimento; crescimento em soak | Memória de trabalho ≤1,5× o baseline Windows equivalente antes do beta e ≤1,25× antes do 1.0; CPU idle <3% de um core lógico; sem crescimento contínuo após aquecimento. |
-| Linux nativo | Builds e smoke tests por distro, GPU e sessão gráfica | Nenhum componente Windows/Wine no runtime; 100% dos ambientes anunciados passam os fluxos P0 de smoke. |
-| Disciplina de otimização | Mudanças de performance com diagnóstico e comparação reproduzível | 100% das otimizações aceitas têm evidência antes/depois fora da variação de medição; zero otimização especulativa sem gargalo identificado. |
-| Build e release | Builds limpos, artefatos e dependências reproduzíveis | Build Linux x86_64 reproduzível a partir de checkout limpo; dependências e licenças inventariadas; instalador e rollback documentados. |
+| Functional coverage | Workflows with status, priority, evidence, and test; P0 pass rate | 100% of P0 workflows pass; every remaining feature is explicitly marked supported, partial, or unavailable. |
+| File integrity | Semantically equal round trips; supported fields lost; silent losses | 100% of P0 corpus cases pass; zero silent loss; zero corruption in save tests. |
+| Reliability | Crash-free beta sessions; successful launch/open/save; open critical defects | ≥99.5% crash-free sessions across at least 200 beta sessions; 0 open critical defects; 0 reproducible data loss. |
+| UI responsiveness | P95 for a common action (selection, property edit, opening a tab) | ≤100 ms on the reference project; long operations must show progress and not block input. |
+| Startup and operations | P50/P95 cold/warm startup, open, and save compared with native Studio | Initially ≤1.5× the equivalent baseline; goal before 1.0: ≤1.25×. If an operation has no equivalent, define and justify its own SLO. |
+| Viewport | P95 and P99 frame time in reference scenes; hitches >100 ms per minute | Initial target: 60 FPS on recommended hardware (P95 ≤16.7 ms), minimum 30 FPS on minimum hardware (P95 ≤33.3 ms); record p99 and hitches. |
+| Memory/CPU | PSS/RSS at idle and with P50/P90 scenes; idle CPU after warmup; soak growth | Working memory ≤1.5× the equivalent Windows baseline before beta and ≤1.25× before 1.0; idle CPU <3% of one logical core; no continuous growth after warmup. |
+| Native Linux | Builds and smoke tests by distro, GPU, and graphical session | No Windows/Wine component in the runtime; 100% of announced environments pass P0 smoke workflows. |
+| Optimization discipline | Performance changes with diagnosis and reproducible comparison | 100% of accepted optimizations have before/after evidence beyond measurement variation; zero speculative optimization without an identified bottleneck. |
+| Build and release | Clean builds, artifacts, and reproducible dependencies | Reproducible Linux x86_64 build from a clean checkout; dependencies and licenses inventoried; installer and rollback documented. |
 
-As metas de paridade da tabela são limites máximos aceitáveis para workflows críticos, não o resultado ideal. Depois da Fase 0, escolher um workflow P0 frequente e estabelecer um stretch goal para o 1.0 de pelo menos 20% menor P95 que o Studio original, se a medição confirmar uma oportunidade segura. Se não existir oportunidade comprovada, não introduzir otimização artificial só para atingir esse número; registrar o resultado e escolher outro workflow.
+The parity targets in the table are maximum acceptable limits for critical workflows, not the ideal result. After Phase 0, choose a frequent P0 workflow and set a 1.0 stretch goal of at least 20% lower P95 than original Studio, if measurements confirm a safe opportunity. If no proven opportunity exists, do not add artificial optimization just to hit that number; record the result and choose another workflow.
 
-### Política de otimização — diagnóstico antes de mudança
+### Optimization policy — diagnose before changing
 
-O projeto pode usar algoritmos, layouts de dados, cache, carregamento incremental/assíncrono, batching e paralelismo diferentes do Studio original. Essas são hipóteses de implementação, não otimizações automáticas: cada uma precisa resolver um custo observado e preservar semântica, ordem, eventos e resultados do workflow.
+The project may use algorithms, data layouts, caching, incremental/asynchronous loading, batching, and parallelism that differ from original Studio. These are implementation hypotheses, not automatic optimizations: each must address an observed cost and preserve workflow semantics, ordering, events, and results.
 
-Para cada proposta de performance, registrar em `benchmarks/` ou em issue/ADR:
+For each performance proposal, record the following in `benchmarks/` or an issue/ADR:
 
-1. Sintoma que o usuário percebe e passos para reproduzi-lo.
-2. Máquina, build, projeto/fixture, sequência de ações e medições antes da mudança.
-3. Perfil ou rastreamento que localiza o custo; não inferir o gargalo só pela aparência do código.
-4. Hipótese causal, métrica primária e métricas secundárias que podem piorar.
-5. Resultado após a mudança, repetições, distribuição/ruído e testes diferenciais que protegem o comportamento.
-6. Decisão: manter, reverter ou registrar um trade-off aprovado. Se o ganho não superar o ruído, reverter ou simplificar.
+1. The symptom the user experiences and steps to reproduce it.
+2. The machine, build, project/fixture, action sequence, and measurements before the change.
+3. A profile or trace that locates the cost; do not infer the bottleneck from code appearance alone.
+4. The causal hypothesis, primary metric, and secondary metrics that could get worse.
+5. The result after the change, repetitions, distribution/noise, and differential tests that protect behavior.
+6. The decision: keep, revert, or record an approved trade-off. If the gain does not exceed noise, revert or simplify.
 
-Uma otimização não passa se aumentar throughput numa microbenchmark e piorar o workflow completo, a cauda P95/P99, uso de memória ou integridade de dados além dos limites. Comparar sempre o mesmo build mode, dataset e hardware; guardar o commit e os resultados para detectar regressões futuras.
+An optimization does not pass if it increases throughput in a microbenchmark but worsens the full workflow, P95/P99 tail, memory use, or data integrity beyond limits. Always compare the same build mode, dataset, and hardware; save the commit and results to detect future regressions.
 
-### Protocolo de benchmark
+### Benchmark protocol
 
-1. Registrar commit, build type, distro/kernel, CPU, GPU/driver, resolução/escala, sessão gráfica, versão do Studio oracle e hashes dos datasets.
-2. Medir no mesmo hardware e com os mesmos projetos. Separar início frio de morno; rodar pelo menos 5 aquecimentos e 30 medições por operação de latência.
-3. Reportar mediana, P95, P99 quando houver amostra suficiente, dispersão e taxa de falha. Não publicar somente média ou uma execução favorável.
-4. Medir viewport durante 5 minutos por cena após aquecimento; incluir frame-time, stutters, uso de GPU, memória e temperatura/clock quando disponível.
-5. Salvar resultados versionados em `benchmarks/results/<commit>/<ambiente>/`. Cada otimização precisa de perfil e comparação antes/depois.
-6. Usar Criterion se o core for Rust ou ferramenta equivalente adequada à stack escolhida; usar `perf` e profiling de GPU para localizar gargalos no Linux. Microbenchmark não substitui teste de experiência completa.
+1. Record commit, build type, distro/kernel, CPU, GPU/driver, resolution/scale, graphical session, Studio oracle version, and dataset hashes.
+2. Measure on the same hardware and projects. Separate cold and warm starts; run at least 5 warmups and 30 measurements per latency operation.
+3. Report median, P95, P99 when sample size allows, spread, and failure rate. Do not publish only the mean or a favorable run.
+4. Measure the viewport for 5 minutes per scene after warmup; include frame time, stutters, GPU use, memory, and temperature/clock where available.
+5. Save versioned results in `benchmarks/results/<commit>/<environment>/`. Each optimization needs a profile and before/after comparison.
+6. Use Criterion if the core is Rust or an equivalent tool suited to the chosen stack; use `perf` and GPU profiling to locate Linux bottlenecks. A microbenchmark does not replace a full experience test.
 
-### Conjunto mínimo de cenários
+### Minimum scenario set
 
-- Projeto vazio: abrir, salvar, reabrir e fechar.
-- Projeto P0 pequeno: hierarquia, propriedades, scripts e playtest local.
-- Projeto mediano: mediana dos arquivos do corpus autorizado.
-- Projeto grande: percentil 90 do corpus; se ainda não houver corpus real, usar cena sintética e identificá-la como sintética.
-- Script Luau curto e longo: análise, autocomplete, edição, compilação, execução e erro.
-- Stress: seleção/transform contínua, alternar tabs, undo/redo, salvar durante carga e playtest repetido.
-- Recuperação: encerramento forçado antes, durante e depois de salvar; verificar arquivo e recovery state.
+- Empty project: open, save, reopen, and close.
+- Small P0 project: hierarchy, properties, scripts, and local playtest.
+- Medium project: median files from the authorized corpus.
+- Large project: 90th percentile of the corpus; if no real corpus exists yet, use a synthetic scene and label it synthetic.
+- Short and long Luau scripts: analysis, autocomplete, editing, compilation, execution, and errors.
+- Stress: continuous selection/transform, switch tabs, undo/redo, save under load, and repeated playtest.
+- Recovery: force shutdown before, during, and after save; verify the file and recovery state.
 
-## Estratégia de testes
+## Testing strategy
 
-- **Unitários:** parser, serializer, árvore de Instances, referências, tipos e operações matemáticas.
-- **Diferenciais:** executar o mesmo fluxo e dados no Studio original nativo no Windows e no port Linux; comparar estados observáveis com tolerâncias declaradas.
-- **Golden files:** fixtures versionadas e hasheadas para formatos, propriedades e scripts; revisão explícita quando a versão-alvo mudar.
-- **E2E:** criar/abrir → editar → salvar → reabrir → playtest → confirmar estado e logs.
-- **Fuzzing:** entradas truncadas, comprimentos extremos, tipos desconhecidos, grafos cíclicos/inválidos e assets malformados; parser deve rejeitar ou preservar com segurança, nunca travar ou corromper arquivo.
-- **Soak:** sessões longas e repetição de abrir/salvar/playtest para detectar leaks, deadlocks, handles e queda de frame rate.
-- **GPU/desktop:** smoke automatizado quando possível e sessões manuais registradas para Wayland/X11 e os drivers anunciados.
-- **Regressão:** nenhum release muda suporte de arquivo, workflow ou performance sem exibir diferenças no relatório de compatibilidade.
+- **Unit:** parser, serializer, Instance tree, references, types, and math operations.
+- **Differential:** run the same workflow and data in original Studio natively on Windows and in the Linux port; compare observable states with stated tolerances.
+- **Golden files:** versioned and hashed fixtures for formats, properties, and scripts; explicit review when the target version changes.
+- **E2E:** create/open → edit → save → reopen → playtest → confirm state and logs.
+- **Fuzzing:** truncated inputs, extreme lengths, unknown types, cyclic/invalid graphs, and malformed assets; the parser must safely reject or preserve them, never hang or corrupt a file.
+- **Soak:** long sessions and repeated open/save/playtest to detect leaks, deadlocks, handles, and frame-rate drops.
+- **GPU/desktop:** automated smoke tests where possible and recorded manual sessions for Wayland/X11 and announced drivers.
+- **Regression:** no release changes file, workflow, or performance support without showing the differences in the compatibility report.
 
-## Riscos e respostas
+## Risks and responses
 
-| Risco | Como aparece | Resposta planejada |
+| Risk | What it looks like | Planned response |
 |---|---|---|
-| Escopo enorme da engine/API | Implementar UI sem semântica suficiente ou prometer paridade sem base. | Priorizar workflows, manter matriz por versão e concluir fatias verticais. |
-| Formato evolui e possui lacunas | Arquivos abrem mas dados são descartados ou reescritos incorretamente. | Corpus diferencial, preservação de campos desconhecidos, saves atômicos e gates de zero perda silenciosa. |
-| Luau não equivale à engine | Script compila mas espera APIs, scheduler ou semântica ausentes. | Separar linguagem, bindings, DataModel e runtime; testar cada camada. |
-| Performance ruim em projetos grandes | Pausas de UI, frame drops, consumo crescente. | Medir antes, usar cenas P50/P90, perf/profile e otimização guiada por gargalo. |
-| Variação de driver e desktop | Crashes ou renderização inconsistente entre Wayland/X11 e vendors. | Matriz anunciada, renderer isolado, fallback nativo documentado e logs de GPU redigidos. |
-| Mudança no Studio/engine | Evidência ou compatibilidade quebra com uma versão nova. | Fixar versão-alvo por milestone, registrar hash, manter regressão multi-versão antes de atualizar baseline. |
-| Integrações remotas frágeis | Login/sync/publish falham e ameaçam dados locais. | Deixar remoto para fase posterior, interfaces isoladas, fakes e sempre preservar estado local. |
-| Stack mista e FFI | Rust/C++/UI dificultam build, debugging e releases. | ADR e spikes medidos antes de adotar dependência ou fronteira de linguagem. |
+| Large engine/API scope | Build UI without enough semantics or promise unsupported parity. | Prioritize workflows, maintain a versioned matrix, and complete vertical slices. |
+| Format changes and coverage gaps | Files open but data is discarded or rewritten incorrectly. | Differential corpus, preserve unknown fields, atomic saves, and gates requiring zero silent loss. |
+| Luau is not the engine | Scripts compile but depend on missing APIs, scheduler, or semantics. | Separate language, bindings, DataModel, and runtime; test each layer. |
+| Poor performance on large projects | UI pauses, frame drops, growing resource use. | Measure first, use P50/P90 scenes, profile, and optimize against bottlenecks. |
+| Driver and desktop variation | Crashes or inconsistent rendering across Wayland/X11 and vendors. | Published matrix, isolated renderer, documented native fallback, and redacted GPU logs. |
+| Studio/engine changes | Evidence or compatibility breaks with a new version. | Pin a target version per milestone, record hashes, and maintain multi-version regression before updating the baseline. |
+| Fragile remote integrations | Login/sync/publish failures threaten local data. | Defer remote work, isolate interfaces, use fakes, and always preserve local state. |
+| Mixed stack and FFI | Rust/C++/UI make builds, debugging, and releases harder. | Use ADRs and measured spikes before adopting a dependency or language boundary. |
 
-## Decisões técnicas pendentes
+## Open technical decisions
 
-Registrar cada decisão em ADR antes de torná-la difícil de reverter:
+Record each decision in an ADR before it becomes difficult to reverse:
 
-1. **Linguagem e arquitetura do core:** comparar integração com Luau, `rbx-dom`, UI e facilidade de perf/debug.
-2. **UI desktop:** comparar produtividade para docking/editor/painéis, acessibilidade, Wayland/X11 e consumo.
-3. **Renderer:** medir throughput, frame pacing, picking, shader workflow, drivers Intel/AMD/NVIDIA e uso de memória.
-4. **Modelo de Instances:** tipagem, propriedades desconhecidas, reflection database, versionamento e serialização.
-5. **Plugins/extensões:** processo isolado ou in-process, ABI/API, crash containment e compatibilidade.
-6. **Distribuição:** pacote, permissões de acesso a arquivos, atualização e rollback.
+1. **Core language and architecture:** compare integration with Luau, `rbx-dom`, UI, and ease of profiling/debugging.
+2. **Desktop UI:** compare productivity for docking/editors/panels, accessibility, Wayland/X11, and resource use.
+3. **Renderer:** measure throughput, frame pacing, picking, shader workflow, Intel/AMD/NVIDIA drivers, and memory use.
+4. **Instance model:** typing, unknown properties, reflection database, versioning, and serialization.
+5. **Plugins/extensions:** isolated process or in-process, ABI/API, crash containment, and compatibility.
+6. **Distribution:** package, file access permissions, updates, and rollback.
 
-Critérios comuns: funcionalidade P0, p95/P99 medidos, PSS/RSS, qualidade de integração com desktop, facilidade de testes, maturidade da dependência, licença, tamanho do binário e custo de manutenção.
+Shared criteria: P0 functionality, measured p95/P99, PSS/RSS, quality of desktop integration, testability, dependency maturity, license, binary size, and maintenance cost.
 
-## Pesquisa e fontes técnicas
+## Research and technical sources
 
-Pesquisa consultada em 28/10/2026. As páginas listadas abaixo são fontes técnicas ou projetos públicos; não foram consultados materiais normativos da Roblox.
+Research reviewed on 2026-10-28. The pages below are technical sources or public projects; no Roblox normative materials were consulted.
 
-### REA e metodologia
+### REA and methodology
 
-- [REA Native Binary Analysis](https://rea.tools/guides/native/) — exemplo oficial que combina instruções, caller e dados constantes; mostra como uma primeira decompilação pode omitir informação e como comparar a implementação com o binário original.
-- [REA DX-Ball case study](https://rea.tools/showcase/dx-ball/) — caso público com reconstrução pequena, comparação de milhares de entradas e verificação de bytes compilados.
-- [REA Desktop Applications](https://github.com/morluto/rea/blob/main/docs/desktop-applications.md) — inventário de instalação com limites e evidências; útil para mapear componentes antes de abrir binários individuais.
+- [REA Native Binary Analysis](https://rea.tools/guides/native/) — an official example combining instructions, callers, and constant data; shows how an initial decompilation may omit information and how to compare an implementation against the original binary.
+- [REA DX-Ball case study](https://rea.tools/showcase/dx-ball/) — a public small-scale reconstruction, comparison across thousands of inputs, and verification of compiled bytes.
+- [REA Desktop Applications](https://github.com/morluto/rea/blob/main/docs/desktop-applications.md) — installation inventory with limitations and evidence; useful for mapping components before opening individual binaries.
 
-### Engine, formatos e ferramentas de criador
+### Engine, formats, and creator tools
 
-- [Luau oficial](https://luau.org/) e [repositório Luau](https://github.com/luau-lang/luau) — linguagem embutível, compiler/VM e type system. Luau sozinho não implementa a Roblox Engine.
-- [Roblox Engine API Reference](https://create.roblox.com/docs/reference/engine) — referência técnica de classes, tipos, enums, membros e notas de release. A cobertura deve ser indexada por versão.
-- [rbx-dom](https://github.com/rojo-rbx/rbx-dom) — bibliotecas Rust para DOM/serialização; o projeto documenta leitura/escrita de formatos XML e binários e publica uma tabela explícita de cobertura por tipo.
-- [Roblox binary file format specification](https://github.com/RobloxAPI/spec/blob/master/formats/rbxl.md) — especificação comunitária do formato binário com referências a esforços de reverse engineering; usar junto de fixtures diferenciais, não como garantia de compatibilidade completa.
-- [Rojo](https://github.com/rojo-rbx/rojo) — referência pública para fluxo com arquivos, Git, scripts/modelos e sincronização. O próprio projeto delimita áreas de conversão/sync que ainda exigem configuração; não é equivalente ao Studio completo.
+- [Official Luau site](https://luau.org/) and [Luau repository](https://github.com/luau-lang/luau) — embeddable language, compiler/VM, and type system. Luau alone does not implement Roblox Engine.
+- [Roblox Engine API Reference](https://create.roblox.com/docs/reference/engine) — technical reference for classes, types, enums, members, and release notes. Coverage should be indexed by version.
+- [rbx-dom](https://github.com/rojo-rbx/rbx-dom) — Rust libraries for DOM/serialization; the project documents XML and binary format reading/writing and publishes an explicit per-type coverage table.
+- [Roblox binary file format specification](https://github.com/RobloxAPI/spec/blob/master/formats/rbxl.md) — community specification for the binary format with references to reverse engineering efforts; use it alongside differential fixtures, not as a guarantee of complete compatibility.
+- [Rojo](https://github.com/rojo-rbx/rojo) — public reference for file-based workflows, Git, scripts/models, and synchronization. The project itself identifies conversion/sync areas that still need configuration; it is not equivalent to full Studio.
 
-### Métricas, performance e reconstruções públicas
+### Metrics, performance, and public reconstructions
 
-- [Google SRE: error budgets](https://sre.google/sre-book/embracing-risk/) — prática para vincular releases a métricas objetivas de confiabilidade; adaptar ao app local com gates por crash, perda de dados e workflows.
-- [Criterion.rs](https://docs.rs/criterion/latest/criterion/) — exemplo de microbenchmark estatístico que ajuda a separar regressão real de ruído; usar se Rust for escolhido ou adotar ferramenta equivalente.
-- [Linux kernel docs: perf/workload tracing](https://cdn.kernel.org/doc/html/latest/admin-guide/workload-tracing.html) — `perf` para localizar uso de CPU e gargalos no Linux.
-- [REA ski-or-die reconstruction](https://github.com/tuunanet/rea-ski-or-die-reconstruction) — relato público de reconstrução do zero em Rust + SDL2, limitado a um minijogo e guiado por uma especificação comportamental.
-- [hexgrab](https://github.com/iammukeshm/hexgrab) — relato de estudo de um recurso pequeno de PowerToys com REA, conferência contra código público e testes E2E. É um exemplo de processo em um alvo MIT, não uma prova de paridade ampla.
+- [Google SRE: error budgets](https://sre.google/sre-book/embracing-risk/) — practice for tying releases to objective reliability metrics; adapt to a local app with gates for crashes, data loss, and workflows.
+- [Criterion.rs](https://docs.rs/criterion/latest/criterion/) — statistical microbenchmarking that helps distinguish a real regression from noise; use if Rust is selected or choose an equivalent tool.
+- [Linux kernel docs: perf/workload tracing](https://cdn.kernel.org/doc/html/latest/admin-guide/workload-tracing.html) — use `perf` to locate CPU use and bottlenecks on Linux.
+- [REA ski-or-die reconstruction](https://github.com/tuunanet/rea-ski-or-die-reconstruction) — a public from-scratch reconstruction in Rust + SDL2, scoped to a minigame and guided by a behavioral specification.
+- [hexgrab](https://github.com/iammukeshm/hexgrab) — an account of studying a small PowerToys feature with REA, checking against public source, and adding E2E tests. It is a process example on an MIT-licensed target, not evidence of broad parity.
 
-Essas fontes justificam candidatos e método, não garantem que uma biblioteca seja completa para o Studio. Toda dependência sugerida deve passar por inspeção de versão, cobertura, licença, testes e benchmark antes de entrar no produto.
+These sources justify candidates and methods; they do not guarantee that a library is complete for Studio. Every proposed dependency must pass version, coverage, license, test, and benchmark review before entering the product.

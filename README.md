@@ -1,19 +1,19 @@
-# Roblox Studio nativo para Linux
+# Native Roblox Studio for Linux
 
-Projeto para portar o Roblox Studio a uma aplicação nativa de Linux. A meta de longo prazo é cobrir os fluxos do Studio de forma independente, com comportamento e compatibilidade verificados; executar o programa Windows por uma camada de compatibilidade não faz parte do objetivo.
+A project to port Roblox Studio to a native Linux application. The long-term goal is to cover Studio workflows independently, with behavior and compatibility verified; running the Windows program through a compatibility layer is outside the project's goal.
 
-## Estado
+## Status
 
-O projeto está na etapa de planejamento e pesquisa. Ainda não há código do aplicativo, build ou release. O [roadmap](ROADMAP.md) define fases, critérios de saída, métricas de qualidade e desempenho e decisões técnicas pendentes.
+The project is in the planning and research stage. There is no application code, build, or release yet. The [roadmap](ROADMAP.md) defines phases, exit criteria, quality and performance metrics, and open technical decisions.
 
-## Princípios
+## Principles
 
-- Usar o Studio original no Windows como referência de comportamento, não como teto de desempenho.
-- Guiar a análise com REA, evidências rastreáveis e testes diferenciais.
-- Evitar perda silenciosa de dados e otimizações sem diagnóstico e medição antes/depois.
-- Manter a implementação e o runtime nativos em Linux.
+- Use original Studio on Windows as a behavior reference, not a performance ceiling.
+- Guide investigation with REA, traceable evidence, and differential tests.
+- Prevent silent data loss and avoid optimizations without diagnosis and before/after measurements.
+- Keep the implementation and runtime native to Linux.
 
-## Documentação do projeto
+## Project documentation
 
-- [ROADMAP.md](ROADMAP.md): fases, escopo, critérios de aceitação, métricas e fontes técnicas.
-- [AGENTS.md](AGENTS.md): instruções de execução técnica, pesquisa, qualidade, otimização e colaboração para agentes de código.
+- [ROADMAP.md](ROADMAP.md): phases, scope, acceptance criteria, metrics, and technical sources.
+- [AGENTS.md](AGENTS.md): agent instructions for engineering, research, quality, optimization, and collaboration.
