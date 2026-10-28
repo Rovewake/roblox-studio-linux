@@ -1,0 +1,1220 @@
+{
+  "captured_at_utc": "2026-10-28T20:51:30+00:00",
+  "source_revision": "ca663a85fd11fb6ce929b04006179ee612cbdd49",
+  "working_tree_dirty": false,
+  "host": {
+    "os": "Linux",
+    "distribution": {
+      "ID": "nixos",
+      "VERSION_ID": "26.05",
+      "PRETTY_NAME": "NixOS 26.05 (Yarara)"
+    },
+    "kernel": "6.18.57",
+    "architecture": "x86_64",
+    "cpu_model": "12th Gen Intel(R) Core(TM) i3-1215U",
+    "logical_cpus": 8,
+    "memory_kib": 11943560,
+    "temporary_filesystem": "ext4",
+    "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
+    "rustc": "rustc 1.99.0 (b940084d7 2026-09-28) (built from a source tarball)"
+  },
+  "method": {
+    "profile": "release",
+    "workload": "one Workspace with generated Part children; Anchored and CFrame per Part",
+    "operations": [
+      "parse",
+      "verified encode",
+      "atomic save with backup and re-open"
+    ],
+    "save_target": "fresh system temporary directory",
+    "warmups": {
+      "parse": 5,
+      "verified_encode": 5,
+      "atomic_save": 5
+    },
+    "iterations_per_operation": 31,
+    "independent_process_samples_per_workload": 5,
+    "percentile_method": "nearest rank",
+    "limits": "synthetic fixtures only; not Studio parity or product SLO measurements"
+  },
+  "summary": [
+    {
+      "format": "model-binary",
+      "requested_instances": 1000,
+      "independent_samples": 5,
+      "metrics_across_processes": {
+        "file_bytes": {
+          "median": 5557.0,
+          "min": 5557.0,
+          "max": 5557.0
+        },
+        "parse_p50_ms": {
+          "median": 1.142,
+          "min": 0.561,
+          "max": 1.596
+        },
+        "parse_p95_ms": {
+          "median": 1.26,
+          "min": 1.022,
+          "max": 3.193
+        },
+        "verified_encode_p50_ms": {
+          "median": 1.939,
+          "min": 1.294,
+          "max": 2.15
+        },
+        "verified_encode_p95_ms": {
+          "median": 2.16,
+          "min": 1.591,
+          "max": 3.512
+        },
+        "atomic_save_p50_ms": {
+          "median": 7.105,
+          "min": 5.444,
+          "max": 7.338
+        },
+        "atomic_save_p95_ms": {
+          "median": 9.939,
+          "min": 7.611,
+          "max": 16.05
+        },
+        "peak_rss_kib": {
+          "median": 19360.0,
+          "min": 19224.0,
+          "max": 19560.0
+        }
+      }
+    },
+    {
+      "format": "model-binary",
+      "requested_instances": 5000,
+      "independent_samples": 5,
+      "metrics_across_processes": {
+        "file_bytes": {
+          "median": 25071.0,
+          "min": 25071.0,
+          "max": 25071.0
+        },
+        "parse_p50_ms": {
+          "median": 3.321,
+          "min": 3.087,
+          "max": 10.354
+        },
+        "parse_p95_ms": {
+          "median": 5.431,
+          "min": 3.738,
+          "max": 12.765
+        },
+        "verified_encode_p50_ms": {
+          "median": 8.525,
+          "min": 8.07,
+          "max": 22.983
+        },
+        "verified_encode_p95_ms": {
+          "median": 10.152,
+          "min": 8.956,
+          "max": 29.937
+        },
+        "atomic_save_p50_ms": {
+          "median": 23.055,
+          "min": 20.777,
+          "max": 61.777
+        },
+        "atomic_save_p95_ms": {
+          "median": 34.168,
+          "min": 21.756,
+          "max": 75.88
+        },
+        "peak_rss_kib": {
+          "median": 41956.0,
+          "min": 41648.0,
+          "max": 41992.0
+        }
+      }
+    },
+    {
+      "format": "model-xml",
+      "requested_instances": 1000,
+      "independent_samples": 5,
+      "metrics_across_processes": {
+        "file_bytes": {
+          "median": 510843.0,
+          "min": 510843.0,
+          "max": 510843.0
+        },
+        "parse_p50_ms": {
+          "median": 35.334,
+          "min": 33.023,
+          "max": 99.14
+        },
+        "parse_p95_ms": {
+          "median": 37.363,
+          "min": 33.694,
+          "max": 118.346
+        },
+        "verified_encode_p50_ms": {
+          "median": 39.751,
+          "min": 37.554,
+          "max": 112.06
+        },
+        "verified_encode_p95_ms": {
+          "median": 123.89,
+          "min": 40.656,
+          "max": 126.743
+        },
+        "atomic_save_p50_ms": {
+          "median": 115.642,
+          "min": 112.494,
+          "max": 117.1
+        },
+        "atomic_save_p95_ms": {
+          "median": 338.965,
+          "min": 120.172,
+          "max": 379.362
+        },
+        "peak_rss_kib": {
+          "median": 18488.0,
+          "min": 18436.0,
+          "max": 18536.0
+        }
+      }
+    },
+    {
+      "format": "model-xml",
+      "requested_instances": 5000,
+      "independent_samples": 5,
+      "metrics_across_processes": {
+        "file_bytes": {
+          "median": 2566843.0,
+          "min": 2566843.0,
+          "max": 2566843.0
+        },
+        "parse_p50_ms": {
+          "median": 167.814,
+          "min": 161.403,
+          "max": 183.032
+        },
+        "parse_p95_ms": {
+          "median": 505.697,
+          "min": 488.675,
+          "max": 553.486
+        },
+        "verified_encode_p50_ms": {
+          "median": 199.42,
+          "min": 193.051,
+          "max": 207.96
+        },
+        "verified_encode_p95_ms": {
+          "median": 611.042,
+          "min": 561.633,
+          "max": 990.81
+        },
+        "atomic_save_p50_ms": {
+          "median": 574.613,
+          "min": 551.067,
+          "max": 598.742
+        },
+        "atomic_save_p95_ms": {
+          "median": 1604.479,
+          "min": 1579.348,
+          "max": 1718.663
+        },
+        "peak_rss_kib": {
+          "median": 37796.0,
+          "min": 37484.0,
+          "max": 40500.0
+        }
+      }
+    },
+    {
+      "format": "place-binary",
+      "requested_instances": 1000,
+      "independent_samples": 5,
+      "metrics_across_processes": {
+        "file_bytes": {
+          "median": 5557.0,
+          "min": 5557.0,
+          "max": 5557.0
+        },
+        "parse_p50_ms": {
+          "median": 0.591,
+          "min": 0.545,
+          "max": 1.173
+        },
+        "parse_p95_ms": {
+          "median": 0.68,
+          "min": 0.607,
+          "max": 1.375
+        },
+        "verified_encode_p50_ms": {
+          "median": 1.37,
+          "min": 1.341,
+          "max": 1.892
+        },
+        "verified_encode_p95_ms": {
+          "median": 1.526,
+          "min": 1.386,
+          "max": 2.007
+        },
+        "atomic_save_p50_ms": {
+          "median": 5.523,
+          "min": 5.315,
+          "max": 7.013
+        },
+        "atomic_save_p95_ms": {
+          "median": 8.623,
+          "min": 7.172,
+          "max": 9.676
+        },
+        "peak_rss_kib": {
+          "median": 19528.0,
+          "min": 19152.0,
+          "max": 19580.0
+        }
+      }
+    },
+    {
+      "format": "place-binary",
+      "requested_instances": 5000,
+      "independent_samples": 5,
+      "metrics_across_processes": {
+        "file_bytes": {
+          "median": 25071.0,
+          "min": 25071.0,
+          "max": 25071.0
+        },
+        "parse_p50_ms": {
+          "median": 3.832,
+          "min": 3.06,
+          "max": 9.94
+        },
+        "parse_p95_ms": {
+          "median": 6.202,
+          "min": 4.088,
+          "max": 12.087
+        },
+        "verified_encode_p50_ms": {
+          "median": 8.841,
+          "min": 7.773,
+          "max": 24.426
+        },
+        "verified_encode_p95_ms": {
+          "median": 9.759,
+          "min": 8.351,
+          "max": 26.64
+        },
+        "atomic_save_p50_ms": {
+          "median": 22.448,
+          "min": 20.378,
+          "max": 60.483
+        },
+        "atomic_save_p95_ms": {
+          "median": 63.969,
+          "min": 23.421,
+          "max": 84.797
+        },
+        "peak_rss_kib": {
+          "median": 41964.0,
+          "min": 41436.0,
+          "max": 42008.0
+        }
+      }
+    },
+    {
+      "format": "place-xml",
+      "requested_instances": 1000,
+      "independent_samples": 5,
+      "metrics_across_processes": {
+        "file_bytes": {
+          "median": 510843.0,
+          "min": 510843.0,
+          "max": 510843.0
+        },
+        "parse_p50_ms": {
+          "median": 35.929,
+          "min": 33.781,
+          "max": 103.553
+        },
+        "parse_p95_ms": {
+          "median": 100.757,
+          "min": 36.451,
+          "max": 126.473
+        },
+        "verified_encode_p50_ms": {
+          "median": 40.12,
+          "min": 36.23,
+          "max": 118.769
+        },
+        "verified_encode_p95_ms": {
+          "median": 114.485,
+          "min": 44.611,
+          "max": 161.805
+        },
+        "atomic_save_p50_ms": {
+          "median": 119.074,
+          "min": 105.372,
+          "max": 132.876
+        },
+        "atomic_save_p95_ms": {
+          "median": 361.402,
+          "min": 129.794,
+          "max": 411.45
+        },
+        "peak_rss_kib": {
+          "median": 18512.0,
+          "min": 18344.0,
+          "max": 18620.0
+        }
+      }
+    },
+    {
+      "format": "place-xml",
+      "requested_instances": 5000,
+      "independent_samples": 5,
+      "metrics_across_processes": {
+        "file_bytes": {
+          "median": 2566843.0,
+          "min": 2566843.0,
+          "max": 2566843.0
+        },
+        "parse_p50_ms": {
+          "median": 172.338,
+          "min": 169.122,
+          "max": 192.652
+        },
+        "parse_p95_ms": {
+          "median": 514.436,
+          "min": 487.382,
+          "max": 665.574
+        },
+        "verified_encode_p50_ms": {
+          "median": 199.221,
+          "min": 196.678,
+          "max": 211.293
+        },
+        "verified_encode_p95_ms": {
+          "median": 610.625,
+          "min": 560.912,
+          "max": 643.838
+        },
+        "atomic_save_p50_ms": {
+          "median": 572.813,
+          "min": 561.373,
+          "max": 677.204
+        },
+        "atomic_save_p95_ms": {
+          "median": 1712.978,
+          "min": 1598.057,
+          "max": 1802.897
+        },
+        "peak_rss_kib": {
+          "median": 37656.0,
+          "min": 37452.0,
+          "max": 38128.0
+        }
+      }
+    }
+  ],
+  "cases": [
+    {
+      "format": "place-binary",
+      "extension": "rbxl",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 5557,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 0.558,
+      "parse_p95_ms": 0.607,
+      "verified_encode_p50_ms": 1.37,
+      "verified_encode_p95_ms": 1.526,
+      "atomic_save_p50_ms": 5.605,
+      "atomic_save_p95_ms": 8.623,
+      "peak_rss_kib": 19528,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 1
+    },
+    {
+      "format": "place-binary",
+      "extension": "rbxl",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 5557,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 0.593,
+      "parse_p95_ms": 0.68,
+      "verified_encode_p50_ms": 1.347,
+      "verified_encode_p95_ms": 1.423,
+      "atomic_save_p50_ms": 5.523,
+      "atomic_save_p95_ms": 7.942,
+      "peak_rss_kib": 19580,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 2
+    },
+    {
+      "format": "place-binary",
+      "extension": "rbxl",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 5557,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 1.173,
+      "parse_p95_ms": 1.375,
+      "verified_encode_p50_ms": 1.892,
+      "verified_encode_p95_ms": 2.007,
+      "atomic_save_p50_ms": 7.013,
+      "atomic_save_p95_ms": 9.676,
+      "peak_rss_kib": 19152,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 3
+    },
+    {
+      "format": "place-binary",
+      "extension": "rbxl",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 5557,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 0.591,
+      "parse_p95_ms": 0.617,
+      "verified_encode_p50_ms": 1.341,
+      "verified_encode_p95_ms": 1.386,
+      "atomic_save_p50_ms": 5.385,
+      "atomic_save_p95_ms": 7.172,
+      "peak_rss_kib": 19484,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 4
+    },
+    {
+      "format": "place-binary",
+      "extension": "rbxl",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 5557,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 0.545,
+      "parse_p95_ms": 0.797,
+      "verified_encode_p50_ms": 1.432,
+      "verified_encode_p95_ms": 1.72,
+      "atomic_save_p50_ms": 5.315,
+      "atomic_save_p95_ms": 8.705,
+      "peak_rss_kib": 19572,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 5
+    },
+    {
+      "format": "place-xml",
+      "extension": "rbxlx",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 510843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 97.716,
+      "parse_p95_ms": 126.473,
+      "verified_encode_p50_ms": 36.23,
+      "verified_encode_p95_ms": 114.485,
+      "atomic_save_p50_ms": 105.372,
+      "atomic_save_p95_ms": 318.488,
+      "peak_rss_kib": 18620,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 1
+    },
+    {
+      "format": "place-xml",
+      "extension": "rbxlx",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 510843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 35.929,
+      "parse_p95_ms": 100.757,
+      "verified_encode_p50_ms": 40.097,
+      "verified_encode_p95_ms": 57.832,
+      "atomic_save_p50_ms": 125.926,
+      "atomic_save_p95_ms": 361.402,
+      "peak_rss_kib": 18588,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 2
+    },
+    {
+      "format": "place-xml",
+      "extension": "rbxlx",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 510843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 35.174,
+      "parse_p95_ms": 37.26,
+      "verified_encode_p50_ms": 40.12,
+      "verified_encode_p95_ms": 44.611,
+      "atomic_save_p50_ms": 119.074,
+      "atomic_save_p95_ms": 411.256,
+      "peak_rss_kib": 18344,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 3
+    },
+    {
+      "format": "place-xml",
+      "extension": "rbxlx",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 510843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 33.781,
+      "parse_p95_ms": 36.451,
+      "verified_encode_p50_ms": 118.769,
+      "verified_encode_p95_ms": 142.433,
+      "atomic_save_p50_ms": 111.13,
+      "atomic_save_p95_ms": 129.794,
+      "peak_rss_kib": 18508,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 4
+    },
+    {
+      "format": "place-xml",
+      "extension": "rbxlx",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 510843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 103.553,
+      "parse_p95_ms": 125.611,
+      "verified_encode_p50_ms": 43.148,
+      "verified_encode_p95_ms": 161.805,
+      "atomic_save_p50_ms": 132.876,
+      "atomic_save_p95_ms": 411.45,
+      "peak_rss_kib": 18512,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 5
+    },
+    {
+      "format": "model-binary",
+      "extension": "rbxm",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 5557,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 0.561,
+      "parse_p95_ms": 1.061,
+      "verified_encode_p50_ms": 1.333,
+      "verified_encode_p95_ms": 1.591,
+      "atomic_save_p50_ms": 5.448,
+      "atomic_save_p95_ms": 7.611,
+      "peak_rss_kib": 19524,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 1
+    },
+    {
+      "format": "model-binary",
+      "extension": "rbxm",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 5557,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 0.568,
+      "parse_p95_ms": 1.022,
+      "verified_encode_p50_ms": 1.294,
+      "verified_encode_p95_ms": 1.933,
+      "atomic_save_p50_ms": 5.444,
+      "atomic_save_p95_ms": 11.315,
+      "peak_rss_kib": 19560,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 2
+    },
+    {
+      "format": "model-binary",
+      "extension": "rbxm",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 5557,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 1.596,
+      "parse_p95_ms": 3.193,
+      "verified_encode_p50_ms": 2.142,
+      "verified_encode_p95_ms": 2.27,
+      "atomic_save_p50_ms": 7.289,
+      "atomic_save_p95_ms": 9.939,
+      "peak_rss_kib": 19224,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 3
+    },
+    {
+      "format": "model-binary",
+      "extension": "rbxm",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 5557,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 1.142,
+      "parse_p95_ms": 1.26,
+      "verified_encode_p50_ms": 1.939,
+      "verified_encode_p95_ms": 2.16,
+      "atomic_save_p50_ms": 7.338,
+      "atomic_save_p95_ms": 8.99,
+      "peak_rss_kib": 19360,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 4
+    },
+    {
+      "format": "model-binary",
+      "extension": "rbxm",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 5557,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 1.226,
+      "parse_p95_ms": 1.913,
+      "verified_encode_p50_ms": 2.15,
+      "verified_encode_p95_ms": 3.512,
+      "atomic_save_p50_ms": 7.105,
+      "atomic_save_p95_ms": 16.05,
+      "peak_rss_kib": 19224,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 5
+    },
+    {
+      "format": "model-xml",
+      "extension": "rbxmx",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 510843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 35.995,
+      "parse_p95_ms": 37.225,
+      "verified_encode_p50_ms": 112.06,
+      "verified_encode_p95_ms": 126.743,
+      "atomic_save_p50_ms": 112.494,
+      "atomic_save_p95_ms": 120.172,
+      "peak_rss_kib": 18508,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 1
+    },
+    {
+      "format": "model-xml",
+      "extension": "rbxmx",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 510843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 99.14,
+      "parse_p95_ms": 118.346,
+      "verified_encode_p50_ms": 39.751,
+      "verified_encode_p95_ms": 123.89,
+      "atomic_save_p50_ms": 116.253,
+      "atomic_save_p95_ms": 348.456,
+      "peak_rss_kib": 18536,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 2
+    },
+    {
+      "format": "model-xml",
+      "extension": "rbxmx",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 510843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 33.883,
+      "parse_p95_ms": 99.299,
+      "verified_encode_p50_ms": 38.871,
+      "verified_encode_p95_ms": 42.823,
+      "atomic_save_p50_ms": 117.1,
+      "atomic_save_p95_ms": 338.965,
+      "peak_rss_kib": 18488,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 3
+    },
+    {
+      "format": "model-xml",
+      "extension": "rbxmx",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 510843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 33.023,
+      "parse_p95_ms": 33.694,
+      "verified_encode_p50_ms": 37.554,
+      "verified_encode_p95_ms": 40.656,
+      "atomic_save_p50_ms": 115.642,
+      "atomic_save_p95_ms": 379.362,
+      "peak_rss_kib": 18436,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 4
+    },
+    {
+      "format": "model-xml",
+      "extension": "rbxmx",
+      "requested_instances": 1000,
+      "serialized_instances": 1001,
+      "file_bytes": 510843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 35.334,
+      "parse_p95_ms": 37.363,
+      "verified_encode_p50_ms": 40.678,
+      "verified_encode_p95_ms": 124.828,
+      "atomic_save_p50_ms": 114.732,
+      "atomic_save_p95_ms": 337.091,
+      "peak_rss_kib": 18484,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 5
+    },
+    {
+      "format": "place-binary",
+      "extension": "rbxl",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 25071,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 3.06,
+      "parse_p95_ms": 4.088,
+      "verified_encode_p50_ms": 7.773,
+      "verified_encode_p95_ms": 8.351,
+      "atomic_save_p50_ms": 20.378,
+      "atomic_save_p95_ms": 63.969,
+      "peak_rss_kib": 42008,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 1
+    },
+    {
+      "format": "place-binary",
+      "extension": "rbxl",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 25071,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 9.94,
+      "parse_p95_ms": 12.087,
+      "verified_encode_p50_ms": 24.426,
+      "verified_encode_p95_ms": 26.64,
+      "atomic_save_p50_ms": 60.483,
+      "atomic_save_p95_ms": 84.797,
+      "peak_rss_kib": 41436,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 2
+    },
+    {
+      "format": "place-binary",
+      "extension": "rbxl",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 25071,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 3.463,
+      "parse_p95_ms": 4.337,
+      "verified_encode_p50_ms": 8.841,
+      "verified_encode_p95_ms": 9.759,
+      "atomic_save_p50_ms": 22.448,
+      "atomic_save_p95_ms": 33.819,
+      "peak_rss_kib": 41768,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 3
+    },
+    {
+      "format": "place-binary",
+      "extension": "rbxl",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 25071,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 4.312,
+      "parse_p95_ms": 6.202,
+      "verified_encode_p50_ms": 8.866,
+      "verified_encode_p95_ms": 10.668,
+      "atomic_save_p50_ms": 20.732,
+      "atomic_save_p95_ms": 23.421,
+      "peak_rss_kib": 41964,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 4
+    },
+    {
+      "format": "place-binary",
+      "extension": "rbxl",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 25071,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 3.832,
+      "parse_p95_ms": 6.597,
+      "verified_encode_p50_ms": 8.029,
+      "verified_encode_p95_ms": 9.74,
+      "atomic_save_p50_ms": 24.012,
+      "atomic_save_p95_ms": 71.838,
+      "peak_rss_kib": 42008,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 5
+    },
+    {
+      "format": "place-xml",
+      "extension": "rbxlx",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 2566843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 170.861,
+      "parse_p95_ms": 539.176,
+      "verified_encode_p50_ms": 199.221,
+      "verified_encode_p95_ms": 631.633,
+      "atomic_save_p50_ms": 677.204,
+      "atomic_save_p95_ms": 1802.897,
+      "peak_rss_kib": 38128,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 1
+    },
+    {
+      "format": "place-xml",
+      "extension": "rbxlx",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 2566843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 192.652,
+      "parse_p95_ms": 665.574,
+      "verified_encode_p50_ms": 211.293,
+      "verified_encode_p95_ms": 610.625,
+      "atomic_save_p50_ms": 575.642,
+      "atomic_save_p95_ms": 1704.84,
+      "peak_rss_kib": 37452,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 2
+    },
+    {
+      "format": "place-xml",
+      "extension": "rbxlx",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 2566843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 175.298,
+      "parse_p95_ms": 514.436,
+      "verified_encode_p50_ms": 199.404,
+      "verified_encode_p95_ms": 643.838,
+      "atomic_save_p50_ms": 572.813,
+      "atomic_save_p95_ms": 1598.057,
+      "peak_rss_kib": 38088,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 3
+    },
+    {
+      "format": "place-xml",
+      "extension": "rbxlx",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 2566843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 172.338,
+      "parse_p95_ms": 487.382,
+      "verified_encode_p50_ms": 197.313,
+      "verified_encode_p95_ms": 560.912,
+      "atomic_save_p50_ms": 561.373,
+      "atomic_save_p95_ms": 1712.978,
+      "peak_rss_kib": 37656,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 4
+    },
+    {
+      "format": "place-xml",
+      "extension": "rbxlx",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 2566843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 169.122,
+      "parse_p95_ms": 513.026,
+      "verified_encode_p50_ms": 196.678,
+      "verified_encode_p95_ms": 592.509,
+      "atomic_save_p50_ms": 567.372,
+      "atomic_save_p95_ms": 1714.427,
+      "peak_rss_kib": 37504,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 5
+    },
+    {
+      "format": "model-binary",
+      "extension": "rbxm",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 25071,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 4.684,
+      "parse_p95_ms": 6.86,
+      "verified_encode_p50_ms": 9.827,
+      "verified_encode_p95_ms": 13.751,
+      "atomic_save_p50_ms": 23.055,
+      "atomic_save_p95_ms": 34.168,
+      "peak_rss_kib": 41648,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 1
+    },
+    {
+      "format": "model-binary",
+      "extension": "rbxm",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 25071,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 3.087,
+      "parse_p95_ms": 4.612,
+      "verified_encode_p50_ms": 8.525,
+      "verified_encode_p95_ms": 10.152,
+      "atomic_save_p50_ms": 61.777,
+      "atomic_save_p95_ms": 75.88,
+      "peak_rss_kib": 41660,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 2
+    },
+    {
+      "format": "model-binary",
+      "extension": "rbxm",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 25071,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 10.354,
+      "parse_p95_ms": 12.765,
+      "verified_encode_p50_ms": 22.983,
+      "verified_encode_p95_ms": 29.937,
+      "atomic_save_p50_ms": 50.527,
+      "atomic_save_p95_ms": 68.372,
+      "peak_rss_kib": 41964,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 3
+    },
+    {
+      "format": "model-binary",
+      "extension": "rbxm",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 25071,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 3.321,
+      "parse_p95_ms": 5.431,
+      "verified_encode_p50_ms": 8.253,
+      "verified_encode_p95_ms": 9.251,
+      "atomic_save_p50_ms": 20.777,
+      "atomic_save_p95_ms": 21.756,
+      "peak_rss_kib": 41956,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 4
+    },
+    {
+      "format": "model-binary",
+      "extension": "rbxm",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 25071,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 3.287,
+      "parse_p95_ms": 3.738,
+      "verified_encode_p50_ms": 8.07,
+      "verified_encode_p95_ms": 8.956,
+      "atomic_save_p50_ms": 21.143,
+      "atomic_save_p95_ms": 25.556,
+      "peak_rss_kib": 41992,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 5
+    },
+    {
+      "format": "model-xml",
+      "extension": "rbxmx",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 2566843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 183.032,
+      "parse_p95_ms": 506.958,
+      "verified_encode_p50_ms": 207.96,
+      "verified_encode_p95_ms": 666.412,
+      "atomic_save_p50_ms": 581.774,
+      "atomic_save_p95_ms": 1613.528,
+      "peak_rss_kib": 40500,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 1
+    },
+    {
+      "format": "model-xml",
+      "extension": "rbxmx",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 2566843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 167.814,
+      "parse_p95_ms": 501.088,
+      "verified_encode_p50_ms": 199.42,
+      "verified_encode_p95_ms": 596.05,
+      "atomic_save_p50_ms": 574.613,
+      "atomic_save_p95_ms": 1579.348,
+      "peak_rss_kib": 38096,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 2
+    },
+    {
+      "format": "model-xml",
+      "extension": "rbxmx",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 2566843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 161.5,
+      "parse_p95_ms": 505.697,
+      "verified_encode_p50_ms": 195.628,
+      "verified_encode_p95_ms": 611.042,
+      "atomic_save_p50_ms": 551.067,
+      "atomic_save_p95_ms": 1602.78,
+      "peak_rss_kib": 37796,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 3
+    },
+    {
+      "format": "model-xml",
+      "extension": "rbxmx",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 2566843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 177.168,
+      "parse_p95_ms": 553.486,
+      "verified_encode_p50_ms": 204.369,
+      "verified_encode_p95_ms": 990.81,
+      "atomic_save_p50_ms": 598.742,
+      "atomic_save_p95_ms": 1718.663,
+      "peak_rss_kib": 37584,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 4
+    },
+    {
+      "format": "model-xml",
+      "extension": "rbxmx",
+      "requested_instances": 5000,
+      "serialized_instances": 5001,
+      "file_bytes": 2566843,
+      "iterations": 31,
+      "parse_encode_warmups": 5,
+      "atomic_save_warmups": 5,
+      "parse_p50_ms": 161.403,
+      "parse_p95_ms": 488.675,
+      "verified_encode_p50_ms": 193.051,
+      "verified_encode_p95_ms": 561.633,
+      "atomic_save_p50_ms": 573.226,
+      "atomic_save_p95_ms": 1604.479,
+      "peak_rss_kib": 37484,
+      "os": "linux",
+      "arch": "x86_64",
+      "independent_sample": 5
+    }
+  ]
+}

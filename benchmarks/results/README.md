@@ -34,3 +34,30 @@ Wayland's headless interval distribution was stable across these runs. X11's P95
 | Xvfb / X11 | [01](phase0-headless-x11-01.json), [02](phase0-headless-x11-02.json), [03](phase0-headless-x11-03.json), [04](phase0-headless-x11-04.json), [05](phase0-headless-x11-05.json) |
 
 The workloads and capture instructions are in [`benchmarks/README.md`](../README.md). No optimization was attempted from these data: they diagnose a software-rendering path only, and product performance budgets remain open until an end-to-end local-project workflow runs on representative Linux hardware.
+
+## Phase 2 project-format baseline
+
+**Captured:** 2026-10-28 20:51 UTC.
+
+**Source revision:** [`ca663a8`](https://github.com/Rovewake/roblox-studio-linux/commit/ca663a85fd11fb6ce929b04006179ee612cbdd49).
+
+**Host:** NixOS 26.05, Linux 6.18.57, x86_64; Intel Core i3-1215U (6 cores / 8 threads), 11 GiB RAM; temporary filesystem ext4.
+
+**Build:** Release, Rust/Cargo 1.99.0.
+
+**Workload:** generated `Workspace` with 1,000 or 5,000 `Part` children, each with `Anchored` and `CFrame`; all four place/model binary/XML formats. Each format/size pair ran in five independent processes, with five warmups and 31 measured iterations per operation per process. P95 uses nearest rank. The process RSS is Linux `VmHWM`.
+
+The table reports the median of the five process-level P50/P95 values. Peak RSS reports the median and min–max across those processes. Exact raw process results and complete across-process ranges are in [`phase2-format-baseline.json`](phase2-format-baseline.json).
+
+| Format | Instances | File size | Parse P50 / P95 ms | Verified encode P50 / P95 ms | Atomic save P50 / P95 ms | Peak RSS MiB |
+|---|---:|---:|---:|---:|---:|---:|
+| Model binary | 1,000 | 5.4 KiB | 1.14 / 1.26 | 1.94 / 2.16 | 7.11 / 9.94 | 18.9 (18.8–19.1) |
+| Model binary | 5,000 | 24.5 KiB | 3.32 / 5.43 | 8.53 / 10.15 | 23.05 / 34.17 | 41.0 (40.7–41.0) |
+| Model XML | 1,000 | 498.9 KiB | 35.33 / 37.36 | 39.75 / 123.89 | 115.64 / 338.96 | 18.1 (18.0–18.1) |
+| Model XML | 5,000 | 2,506.7 KiB | 167.81 / 505.70 | 199.42 / 611.04 | 574.61 / 1,604.48 | 36.9 (36.6–39.6) |
+| Place binary | 1,000 | 5.4 KiB | 0.59 / 0.68 | 1.37 / 1.53 | 5.52 / 8.62 | 19.1 (18.7–19.1) |
+| Place binary | 5,000 | 24.5 KiB | 3.83 / 6.20 | 8.84 / 9.76 | 22.45 / 63.97 | 41.0 (40.5–41.0) |
+| Place XML | 1,000 | 498.9 KiB | 35.93 / 100.76 | 40.12 / 114.48 | 119.07 / 361.40 | 18.1 (17.9–18.2) |
+| Place XML | 5,000 | 2,506.7 KiB | 172.34 / 514.44 | 199.22 / 610.62 | 572.81 / 1,712.98 | 36.8 (36.6–37.2) |
+
+XML is substantially slower than binary for this generated workload, and XML 5,000-Part P95 values vary widely across independent processes. This is a measured symptom, not a causal diagnosis: no profiler trace has identified which XML parsing, encoding, verification, filesystem, or scheduling work dominates. No optimization was made from the baseline. A follow-up must profile the measured path, preserve the fixture and hardware, repeat before/after measurements, and confirm semantic round trips before accepting any change. These synthetic results are not Studio parity, arbitrary-project coverage, or product SLOs.

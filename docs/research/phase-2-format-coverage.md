@@ -1,7 +1,7 @@
 # Phase 2 project-format coverage and evidence
 
 **Date:** 2026-10-28
-**Status:** implementation and synthetic tests are being integrated; the phase acceptance gate is pending CI and the baseline capture.
+**Status:** implementation, synthetic tests, local gates, and Linux baseline are complete; the phase acceptance gate is pending remote CI.
 
 ## Question
 
