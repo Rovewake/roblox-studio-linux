@@ -1,7 +1,7 @@
 # Phase 0 headless baseline
 
 **Date:** 2026-10-28
-**Source revision:** Phase 0 prototype and capture helper; record the implementation commit in the completion commit.
+**Source revision:** [`4c09c4b`](https://github.com/Rovewake/roblox-studio-linux/commit/4c09c4b9973acad34c03c3857759cfc31491477f) (Phase 0 prototype and capture helper).
 
 ## Scope and setup
 
