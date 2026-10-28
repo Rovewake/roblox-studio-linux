@@ -1,0 +1,18 @@
+[workspace]
+members = [
+    "crates/studio-project",
+    "prototypes/phase-0-native-spike",
+]
+resolver = "3"
+
+[workspace.dependencies]
+lz4_flex = "=0.13.1"
+rbx_binary = "=3.0.1"
+rbx_dom_weak = "=4.2.0"
+rbx_reflection = "=7.0.0"
+rbx_reflection_database = { version = "=3.0.1", features = ["debug_always_use_bundled"] }
+rbx_xml = "=3.0.1"
+rustix = { version = "=0.38.44", features = ["fs"] }
+thiserror = "=2.0.18"
+xml-rs = "=1.0.0"
+zstd = "=0.13.2"

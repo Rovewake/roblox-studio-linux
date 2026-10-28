@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<roblox version="4">
+  <Item class="Workspace" referent="RBX0">
+    <Properties>
+      <string name="Name">Workspace</string>
+      <bool name="StreamingEnabled">false</bool>
+      <string name="FutureStringProperty">retain this value</string>
+    </Properties>
+    <Item class="ObjectValue" referent="RBX1">
+      <Properties>
+        <string name="Name">Forward link</string>
+        <Ref name="Value">RBX2</Ref>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="RBX2">
+      <Properties>
+        <string name="Name">Repeated</string>
+        <bool name="Anchored">true</bool>
+        <Vector3 name="Position">
+          <X>1</X>
+          <Y>2</Y>
+          <Z>3</Z>
+        </Vector3>
+      </Properties>
+    </Item>
+    <Item class="Folder" referent="RBX3">
+      <Properties>
+        <string name="Name">Repeated</string>
+      </Properties>
+    </Item>
+  </Item>
+</roblox>

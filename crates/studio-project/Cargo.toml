@@ -1,0 +1,22 @@
+[package]
+name = "studio-project"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[dependencies]
+lz4_flex.workspace = true
+rbx_binary.workspace = true
+rbx_dom_weak.workspace = true
+rbx_reflection.workspace = true
+rbx_reflection_database.workspace = true
+rbx_xml.workspace = true
+rustix.workspace = true
+thiserror.workspace = true
+xml-rs.workspace = true
+zstd.workspace = true
+
+[[bench]]
+name = "format_io"
+harness = false

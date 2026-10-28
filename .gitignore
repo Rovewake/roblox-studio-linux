@@ -1,5 +1,4 @@
 /target/
-/prototypes/**/target/
 *.profraw
 *.trace
 benchmark-results/

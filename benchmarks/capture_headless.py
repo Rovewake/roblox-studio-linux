@@ -17,7 +17,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPIKE = ROOT / "prototypes/phase-0-native-spike/target/release/phase-0-native-spike"
+SPIKE = ROOT / "target/release/phase-0-native-spike"
 
 
 class VirtualDisplay:

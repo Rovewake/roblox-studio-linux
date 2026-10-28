@@ -15,8 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  repository-and-spike:
-    name: Repository checks and Linux spike build
+  repository-and-workspace:
+    name: Repository checks and Rust workspace
     runs-on: ubuntu-26.04
     timeout-minutes: 25
     steps:
@@ -34,16 +34,16 @@ jobs:
         run: python3 scripts/check_repo.py
 
       - name: Check Rust formatting
-        run: cargo fmt --manifest-path prototypes/phase-0-native-spike/Cargo.toml --all -- --check
+        run: cargo fmt --all -- --check
 
-      - name: Run spike unit tests
-        run: cargo test --locked --manifest-path prototypes/phase-0-native-spike/Cargo.toml
+      - name: Run workspace tests
+        run: cargo test --locked --workspace
 
       - name: Run Clippy
-        run: cargo clippy --locked --manifest-path prototypes/phase-0-native-spike/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
 
-      - name: Build optimized Linux spike
-        run: cargo build --locked --release --manifest-path prototypes/phase-0-native-spike/Cargo.toml
+      - name: Build optimized Linux workspace
+        run: cargo build --locked --release --workspace
 
       - name: Install isolated headless display and software Vulkan runtimes
         run: |

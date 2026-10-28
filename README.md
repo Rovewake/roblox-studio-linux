@@ -6,7 +6,7 @@ This is intended to become a distributable tool for Linux creators beyond the re
 
 ## Status
 
-The Phase 0 architecture and measurement gate and the Phase 1 REA/evidence gate are complete. The native prototype, Linux build checks, and headless Wayland/X11 baseline passed GitHub Actions; the contracts cover all eight P0 workflows. This remains pre-product: no Studio workflow is implemented, no release environment is qualified, and no app is published. The prototype measures a generated hierarchy, long source buffer, and instanced renderer; it is not a usable Studio replacement. See the [roadmap](ROADMAP.md), [Linux support matrix](docs/platform/linux-support-matrix.md), and [headless measurements](benchmarks/results/README.md).
+The Phase 0 architecture and measurement gate and the Phase 1 REA/evidence gate are complete. Phase 2 is in review: a Rust `studio-project` crate now handles a guarded synthetic subset of `.rbxl`, `.rbxm`, `.rbxlx`, and `.rbxmx`, with atomic local saves and recovery copies. This does not yet establish compatibility with arbitrary Studio projects. The native prototype, Linux build checks, and headless Wayland/X11 baseline passed GitHub Actions; the contracts cover all eight P0 workflows. This remains pre-product: no Studio workflow is implemented, no release environment is qualified, and no app is published. The prototype measures a generated hierarchy, long source buffer, and instanced renderer; it is not a usable Studio replacement. See the [roadmap](ROADMAP.md), [Linux support matrix](docs/platform/linux-support-matrix.md), and [headless measurements](benchmarks/results/README.md).
 
 ## Principles
 
@@ -21,3 +21,4 @@ The Phase 0 architecture and measurement gate and the Phase 1 REA/evidence gate 
 
 - [ROADMAP.md](ROADMAP.md): phases, scope, acceptance criteria, metrics, and technical sources.
 - [AGENTS.md](AGENTS.md): agent instructions for engineering, research, quality, optimization, and collaboration.
+- [ADR-0002](docs/decisions/ADR-0002-project-format-adapter.md) and [Phase 2 format coverage](docs/research/phase-2-format-coverage.md): project format boundary, evidence, limits, and fixture provenance.

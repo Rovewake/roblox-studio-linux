@@ -35,6 +35,16 @@ Use `python3 benchmarks/capture_headless.py --backend wayland --metrics-out benc
 
 The [ROADMAP performance table](../ROADMAP.md#metrics-and-measurement-method) contains proposed release limits, not measurements. The native spike's first measurements are provisional and must not be used as P0 product SLOs. Set absolute product SLOs after the first native vertical slice can open, edit, save, reopen, and playtest a project end to end.
 
+## Phase 2 project-format baseline
+
+`crates/studio-project/benches/format_io.rs` measures parsing, verified encoding, and atomic save for generated `.rbxl`, `.rbxlx`, `.rbxm`, and `.rbxmx` data. It reports file size, serialized instance count, per-operation P50/P95 latency, and per-process peak RSS. Run the full matrix serially from a Rust/Nix development shell so simultaneous benchmark processes do not compete for CPU:
+
+```sh
+nix shell nixpkgs#rustc nixpkgs#cargo nixpkgs#python3 nixpkgs#stdenv.cc --command python3 benchmarks/run_phase2_matrix.py
+```
+
+The default matrix uses 1,000 and 5,000 generated Parts, all four extensions, five independent benchmark processes per workload, 31 measured iterations per operation in each process, and five warmups per operation. JSON preserves every process's raw metrics and also reports the median and min–max range across independent process results. Results go to `benchmarks/results/phase2-format-baseline.json`. The atomic-save test uses the system temporary filesystem, so its latency is not a general disk SLO. These synthetic results establish a Linux baseline for later comparisons; they do not claim performance relative to Windows Studio.
+
 ## Results
 
 Store machine-specific reports under `benchmarks/results/`. Use a generic host label and omit usernames, serial numbers, project paths, and private data. Each result must include the exact measurement method and limitations.
