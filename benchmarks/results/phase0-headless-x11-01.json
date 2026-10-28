@@ -1,0 +1,30 @@
+{
+  "backend": "X11",
+  "adapter": "llvmpipe (LLVM 21.1.8, 256 bits) \u00b7 Vulkan \u00b7 Cpu \u00b7 llvmpipe \u00b7 Mesa 26.1.8 (LLVM 21.1.8)",
+  "nodes": 10000,
+  "code_lines": 20000,
+  "render_instances": 2000,
+  "warmup_frames": 120,
+  "capture_seconds_requested": 30,
+  "capture_elapsed_ms": 30031.99246,
+  "total_frames": 1759,
+  "sampled_frames": 1639,
+  "ui_update_cpu_ms_p50": 0.735,
+  "ui_update_cpu_ms_p95": 1.587,
+  "ui_update_cpu_ms_p99": 2.7043,
+  "present_interval_ms_p50": 17.1634,
+  "present_interval_ms_p95": 20.0061,
+  "present_interval_ms_p99": 43.0777,
+  "estimated_fps_from_median_interval": 58.2635,
+  "intervals_over_100ms": 1,
+  "rss_kib_at_capture": 374480,
+  "window_system": "X11",
+  "display_server": "Xvfb",
+  "headless": true,
+  "visible_on_user_display": false,
+  "display_size_px": [
+    1920,
+    1080
+  ],
+  "scheduler_nice": 10
+}

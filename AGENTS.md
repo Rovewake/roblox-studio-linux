@@ -51,6 +51,13 @@ This repository aims to port Roblox Studio to a **native Linux application** by 
 - Accept an optimization only when its gain is repeatable and exceeds measurement variation, and contract, fixture, or independent-implementation checks confirm functionality and data fidelity are preserved. If there is no measurable gain, revert it or explain the trade-off in an ADR.
 - Do not trade a local improvement for a hidden regression in another metric. Report every P0 workflow regression and keep it within the roadmap's performance limits.
 
+## Non-disruptive graphical testing
+
+- The user works in the development desktop while the agent runs repository tasks. Never focus, move, resize, minimize, switch workspaces, or otherwise manipulate windows on that interactive desktop for automated tests or benchmarks.
+- Use isolated headless display servers for native UI/render checks: Weston headless for Wayland and Xvfb for X11. Keep those runs disconnected from the user's display and record the virtual display, compositor, renderer adapter, workload, and scheduler priority.
+- Headless callback intervals validate repeatability and rendering paths only. They are not physical display, GPU, compositor, product SLO, or Linux support results. Report the actual selected adapter; do not label llvmpipe results as GPU measurements.
+- The user should evaluate the visible product only after a usable workflow is ready. Do not ask them to operate benchmark prototypes during their work session.
+
 ## Responsible use of REA
 
 - Consult the [REA README and official documentation](https://github.com/morluto/rea) before installing, updating, or choosing a provider. Install REA only through channels listed by the official project. The `npx rea-agents@latest setup` command changes agent configuration; review the installation plan and use it only when the task requires REA.

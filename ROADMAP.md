@@ -10,7 +10,7 @@
 - Studio source code is not in this repository. The plan is an independent implementation guided by technical specifications, REA static evidence, public format specifications, fixtures, and creator feedback. REA provides evidence; it does not automatically generate a port.
 - The project has no Windows machine or Windows test environment. Do not plan or gate work on executing Studio on Windows, Windows UI automation, or Windows-hosted test runners. The downloaded Windows package is for authorized static inspection only and must never be executed. Mark behavior that cannot be established from available evidence as unknown; do not claim direct behavioral, compatibility, or performance verification against a running Studio.
 - Do not access or research Roblox terms, rules, policies, legal pages, moderation, or other normative materials. Technical documentation for APIs, the engine, and formats may be consulted when needed.
-- The repository currently contains no product code, build system, benchmarks, or test corpus. Therefore, phases are ordered by dependency, without calendar estimates; estimates will be made after the Phase 0 technical spikes.
+- The repository now has a Phase 0 Rust/native-window rendering spike, build and CI checks, and repeatable headless measurements. It still has no Studio workflow implementation, project data model, release artifact, or release-qualified Linux environment. Phase 2 begins the first product data/persistence code; phases remain ordered by dependency rather than calendar estimates.
 - The long-term goal is full coverage of the Studio workflows inventoried by this project. Intermediate releases may have narrower scope, but must clearly state what works, what is partial, and what does not exist yet.
 - This is a distributable product for Linux creators beyond the repository owner, not a personal setup. Do not hard-code author-specific paths, usernames, credentials, account IDs, device names, display settings, or hardware assumptions; use runtime discovery, XDG Base Directory conventions where appropriate, and documented user configuration.
 
@@ -78,10 +78,11 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 - Use absolute latency, frame-time, memory, reliability, and data-integrity goals on the declared Linux hardware matrix. Select frequent P0 workflows for measured optimization against the port's own baseline; do not claim superiority to Windows Studio.
 - Create ADRs comparing candidates for language, UI, renderer, scene storage, Luau integration, packaging, and plugin system. Do not lock in the stack before measuring a prototype with a large tree, long code, and a 3D viewport.
 - Build a minimal native Linux window and a rendering spike under Wayland and X11. Include no Windows runtime.
-- Audit the repository and add the initial GitHub Actions workflow for documentation and repository checks. Expand it with the chosen formatter, linter, tests, and native Linux build as those tools and code are introduced; define required checks for integration where GitHub settings permit.
+- Build a minimal native Linux window and rendering spike, then smoke-test Wayland with a private Weston headless compositor and X11 with a private Xvfb server. Automated tests must not take focus from or resize the user's interactive desktop.
+- Audit the repository and add GitHub Actions checks for documentation, formatting, tests, linting, an optimized Linux build, and both headless render paths. Define required checks for integration where GitHub settings permit.
 - Create `docs/decisions/`, `docs/research/`, `tests/fixtures/`, and `benchmarks/` when the code structure begins.
 
-**Exit gate:** P0/P1/P2 scope reviewed; reproducible baseline; stack ADRs approved; prototype opens and renders natively in reference Linux environments; initial repository checks pass in GitHub Actions; no unresolved major architectural blocker without a plan.
+**Exit gate:** P0/P1/P2 scope reviewed; repeatable headless workload baseline recorded; the stack ADR is accepted for the first native vertical slice; the prototype opens and renders in isolated headless Wayland and X11 environments; repository and headless smoke checks pass in GitHub Actions; major unknowns have owners and follow-up gates. This gate does not claim physical GPU/compositor support or product performance SLOs. Those require non-disruptive testing on real Linux desktop targets after a usable workflow exists.
 
 ### Phase 1 — REA lab and behavioral specification
 
@@ -200,7 +201,7 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 
 ## Metrics and measurement method
 
-The numeric targets below are **initial targets**, not current measurements. Calibrate them in Phase 0 against repeatable Linux workloads and the declared Linux hardware matrix. The project has no Windows test environment, so no target may depend on a Windows Studio timing or resource baseline. If a target changes, record the reason and new baseline; do not silently relax a failed gate.
+The numeric targets below are **initial targets**, not current product measurements. Phase 0 recorded repeatable headless llvmpipe runs; those verify the UI/render paths and provide a software diagnostic baseline, not physical GPU, desktop compositor, or product SLO measurements. Calibrate absolute product targets after a usable Linux vertical slice is measured on the declared hardware matrix. The project has no Windows test environment, so no target may depend on a Windows Studio timing or resource baseline. If a target changes, record the reason and new baseline; do not silently relax a failed gate.
 
 A release cannot advance to beta or 1.0 with a red release gate. A P95 regression above 10% in a P0 operation blocks the release until it is reproduced, profiled, and fixed, or accepted in an ADR with its cause and impact documented. A single noisy result calls for another measurement, not an automatic exception.
 
@@ -218,7 +219,7 @@ A release cannot advance to beta or 1.0 with a red release gate. A P95 regressio
 | Optimization discipline | Performance changes with diagnosis and reproducible comparison | 100% of accepted optimizations have before/after evidence beyond measurement variation; zero speculative optimization without an identified bottleneck. |
 | Build and release | Clean builds, artifacts, and reproducible dependencies for each advertised Linux distribution/architecture | Reproducible Linux x86_64 build from a clean checkout, plus passing native build/install checks for every additional advertised Linux distribution and architecture; dependencies and licenses inventoried; packages, checksums, and rollback documented. |
 
-The targets in the table are maximum acceptable limits for critical workflows, not the ideal result. After Phase 0, choose a frequent P0 workflow and set a 1.0 stretch goal of at least 20% lower P95 than the first measured Linux implementation, if profiles confirm a safe opportunity. This is an internal improvement target and makes no claim about speed relative to Windows Studio. If no proven opportunity exists, do not add artificial optimization just to hit that number; record the result and choose another workflow.
+The targets in the table are maximum acceptable limits for critical workflows, not the ideal result. After the first product vertical slice has a repeatable hardware baseline, choose a frequent P0 workflow and set a 1.0 stretch goal of at least 20% lower P95 than that implementation, if profiles confirm a safe opportunity. This is an internal improvement target and makes no claim about speed relative to Windows Studio. If no proven opportunity exists, do not add artificial optimization just to hit that number; record the result and choose another workflow.
 
 ### Optimization policy — diagnose before changing
 

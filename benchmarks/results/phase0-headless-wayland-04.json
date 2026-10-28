@@ -1,0 +1,30 @@
+{
+  "backend": "Wayland",
+  "adapter": "llvmpipe (LLVM 21.1.8, 256 bits) \u00b7 Vulkan \u00b7 Cpu \u00b7 llvmpipe \u00b7 Mesa 26.1.8 (LLVM 21.1.8)",
+  "nodes": 10000,
+  "code_lines": 20000,
+  "render_instances": 2000,
+  "warmup_frames": 120,
+  "capture_seconds_requested": 30,
+  "capture_elapsed_ms": 30007.954322,
+  "total_frames": 1764,
+  "sampled_frames": 1644,
+  "ui_update_cpu_ms_p50": 0.7738,
+  "ui_update_cpu_ms_p95": 1.2475,
+  "ui_update_cpu_ms_p99": 1.7081,
+  "present_interval_ms_p50": 17.0747,
+  "present_interval_ms_p95": 25.3479,
+  "present_interval_ms_p99": 28.682,
+  "estimated_fps_from_median_interval": 58.566,
+  "intervals_over_100ms": 0,
+  "rss_kib_at_capture": 371536,
+  "window_system": "Wayland",
+  "display_server": "Weston headless with Pixman",
+  "headless": true,
+  "visible_on_user_display": false,
+  "display_size_px": [
+    1920,
+    1080
+  ],
+  "scheduler_nice": 10
+}

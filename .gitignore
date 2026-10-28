@@ -1,0 +1,7 @@
+/target/
+/prototypes/**/target/
+*.profraw
+*.trace
+benchmark-results/
+benchmarks/results/ci-*.json
+__pycache__/
