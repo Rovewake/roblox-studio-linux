@@ -1,7 +1,7 @@
 # Phase 2 project-format coverage and evidence
 
 **Date:** 2026-10-28
-**Status:** implementation, synthetic tests, local gates, and Linux baseline are complete; the phase acceptance gate is pending remote CI.
+**Status:** the declared synthetic Phase 2 acceptance gate passed, including local gates, the Linux baseline, and GitHub Actions run [40767197299](https://github.com/Rovewake/roblox-studio-linux/actions/runs/40767197299). This does not establish broad Studio project compatibility.
 
 ## Question
 
