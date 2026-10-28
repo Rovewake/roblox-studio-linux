@@ -42,6 +42,8 @@ This repository aims to port Roblox Studio to a **native Linux application** by 
 5. Prefer documented or open formats, libraries, APIs, and protocols. For undocumented formats or services, record evidence and technical uncertainty; the user's authorization to analyze and modify Studio is already established for this project. Do not distribute proprietary Studio executables, libraries, assets, or data in this repository.
 6. Choose a native architecture for rendering and driver integration, and keep dependencies explicit. Compare GPUs, drivers, graphics backends, and desktop sessions; avoid performance conclusions based on a single machine.
 7. For version differences, record the exact Studio reference version and the version of the data/formats observed. Do not assume addresses, filenames, or internal behavior remain stable across versions.
+8. Luau integration must use the official version-pinned source in `vendor/luau` and a narrow native bridge. Clone and build with recursive submodules. Keep source documents editable and lossless when compilation fails; distinguish parsing/bytecode compilation from type checking and Engine compatibility. Never invent Roblox globals to make a script appear to run.
+9. Keep language-only Luau execution separate from Studio playtest. Enforce bounded worker concurrency, execution time, VM memory, and output. Treat the Luau sandbox as defense-in-depth rather than a proven security boundary; do not execute hostile scripts until OS-level isolation has been implemented and validated.
 
 ## Evidence-based optimization
 

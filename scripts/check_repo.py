@@ -34,9 +34,16 @@ REQUIRED_MATRIX_COLUMNS = {
 
 def tracked_files() -> list[Path]:
     excluded = {".git", "target", "node_modules", "__pycache__"}
+    third_party_submodules = {Path("vendor/luau")}
     files = []
     for path in ROOT.rglob("*"):
-        if not path.is_file() or any(part in excluded for part in path.relative_to(ROOT).parts):
+        relative = path.relative_to(ROOT)
+        if not path.is_file() or any(part in excluded for part in relative.parts):
+            continue
+        if any(
+            relative.parts[: len(submodule.parts)] == submodule.parts
+            for submodule in third_party_submodules
+        ):
             continue
         files.append(path)
     return files

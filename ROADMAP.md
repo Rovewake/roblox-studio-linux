@@ -122,13 +122,24 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 
 **Goal:** deliver script editing with real Luau semantics without conflating the language with Roblox Engine.
 
+**Status (2026-10-28): implementation is in progress.** The current slice pins official Luau 0.744, builds its parser/compiler/analysis/VM from the upstream source submodule, preserves exact script source, reports structured diagnostics, and provides a bounded background execution service. `studio-luau::analyze` uses Luau's Frontend for type checking and linting with source modes; it has no project `require` resolver or Roblox Engine definitions, so names such as `game` remain unknown to the analyzer. There is no Engine runtime surface, editor, or playtest integration. See [ADR-0003](docs/decisions/ADR-0003-luau-embedding.md) and the [embedding research note](docs/research/phase-3-luau-embedding.md).
+
 - Evaluate the official Luau runtime/compiler as an embedded dependency. Luau provides the language, compiler, VM, and embedding APIs; by itself it does not provide `Instance`, Roblox services, a scheduler, physics, or Studio behavior.
+- Pin the Luau source submodule to immutable commit `32c28089305f488f901aaf1dbf3fd1cb65fa3d11` (release 0.744); require recursive submodule checkout in CI and document the clone command for users.
+- Keep `ScriptDocument` source verbatim, including invalid source, CRLF/LF, Unicode, and trailing newlines. Compiler diagnostics use one-based lines and UTF-8 byte columns; zero means a coordinate is unavailable. Source errors must never block saving.
+- Keep the C++ bridge narrow and the user-facing API Rust-owned. Limit source to 2 MiB, VM allocations to 1–256 MiB (64 MiB default), execution time to 1–60 seconds (2 seconds default), captured `print` output to 1 MiB, native runtime diagnostics to 16 KiB, and active workers to 1–16 (2 by default). Run jobs on OS worker threads and let the caller poll or explicitly wait. The VM limit excludes compiler and host allocations; timeout/cancellation currently applies during VM execution, not parser/compiler work.
+- Run Luau Frontend type analysis and linting against a named in-memory Script module. Honor `--!strict`, `--!nonstrict`, and `--!nocheck`; return structured errors/warnings with stable locations. The current analyzer uses a cooperative 2-second per-module timeout, has no memory cap, and cannot resolve project modules. Dispatch it off the UI thread.
+- Expose only selected language libraries in the first runtime. Leave `os`, `debug`, file access, Roblox APIs, and project services unavailable; unknown globals must raise a clear runtime error that says Roblox Engine APIs are not implemented.
+- Treat Luau's VM sandbox and resource limits as defense-in-depth, not a proven security boundary. Do not claim safety for hostile scripts. Before running scripts from untrusted projects or remote collaborators, design and test process-level isolation.
+- Record a compiler baseline for deterministic 1k, 10k, and 50k-line sources, including build/CPU, warmups, repeated P50/P95 latency, source size, and peak RSS. Extend measurements with worker/VM startup, execution, and timeout/cancel latency before optimizing the run path. Every performance change needs a named bottleneck and same-host before/after measurements; do not optimize the compiler integration by assumption.
 - Integrate a parser, formatter/linter where compatible, diagnostics, navigation, autocomplete, type checking, and debugging in stages.
 - Build engine bindings on the data model, with tests for properties, methods, events, callbacks, coroutines, and errors.
 - Separate the code editor from the VM and engine API. Allow scripts to remain editable and clearly labeled even when the full runtime is unavailable.
 - Use Luau project's tests and benchmarks as the language baseline; add a corpus of authorized real scripts and compatibility fixtures.
 
-**Exit gate:** reference Luau scripts parse/compile as expected; diagnostics have stable locations; execution does not block the UI; missing APIs produce clear errors instead of invented behavior.
+**Remaining phase work:** add project module resolution, inspect the official formatter options before changing user source, implement navigation/completion/debugger contracts, connect a versioned and explicitly partial Engine reflection surface, and integrate editing into the native shell. The bundled reflection database is for Roblox version 741 while the selected Studio reference is 0.745.0.7451137, and its schema lacks methods/events; do not use it to invent an exact Engine API surface. These remain separate deliverables with independent compatibility coverage.
+
+**Exit gate:** reference Luau scripts parse/compile/type-check as expected; diagnostics have stable locations; execution and analysis do not block the UI; missing APIs produce clear errors instead of invented behavior. Phase 3 remains open until module resolution, editor-facing tools, and version-matched Engine metadata/bindings have their own acceptance evidence.
 
 ### Phase 4 — desktop shell and project editing
 

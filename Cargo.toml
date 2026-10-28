@@ -1,11 +1,13 @@
 [workspace]
 members = [
+    "crates/studio-luau",
     "crates/studio-project",
     "prototypes/phase-0-native-spike",
 ]
 resolver = "3"
 
 [workspace.dependencies]
+cmake = "=0.1.58"
 lz4_flex = "=0.13.1"
 rbx_binary = "=3.0.1"
 rbx_dom_weak = "=4.2.0"

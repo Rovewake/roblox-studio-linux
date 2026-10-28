@@ -45,6 +45,18 @@ nix shell nixpkgs#rustc nixpkgs#cargo nixpkgs#python3 nixpkgs#stdenv.cc --comman
 
 The default matrix uses 1,000 and 5,000 generated Parts, all four extensions, five independent benchmark processes per workload, 31 measured iterations per operation in each process, and five warmups per operation. JSON preserves every process's raw metrics and also reports the median and min–max range across independent process results. Results go to `benchmarks/results/phase2-format-baseline.json`. The atomic-save test uses the system temporary filesystem, so its latency is not a general disk SLO. These synthetic results establish a Linux baseline for later comparisons; they do not claim performance relative to Windows Studio.
 
+## Phase 3 Luau compiler baseline
+
+`run_phase3_matrix.py` generates deterministic disposable Luau files with 1,000, 10,000, and 50,000 lines. It records the source SHA-256, compiler P50/P95, bytecode size, and process peak RSS across five independent processes; each process uses five warmups and 31 measured compiles by default. The harness builds the pinned crate in Release mode, lowers its scheduler priority to `nice 10`, and writes raw samples plus across-process medians/ranges to `benchmarks/results/phase3-luau-baseline.json`.
+
+Run it on Linux from a shell with the pinned Rust toolchain, Python 3, CMake, GNU Make, and a C++17 compiler:
+
+```sh
+python3 benchmarks/run_phase3_matrix.py
+```
+
+These measurements isolate parse/compile work; they are not editor latency, type-checking cost, VM startup/runtime, Studio parity, or a product SLO. Keep workloads and host fixed for before/after comparisons. Do not optimize until profiling connects an observed regression to a causal code path.
+
 ## Results
 
 Store machine-specific reports under `benchmarks/results/`. Use a generic host label and omit usernames, serial numbers, project paths, and private data. Each result must include the exact measurement method and limitations.

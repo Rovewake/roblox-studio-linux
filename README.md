@@ -6,7 +6,7 @@ This is intended to become a distributable tool for Linux creators beyond the re
 
 ## Status
 
-The Phase 0 architecture and measurement gate, Phase 1 REA/evidence gate, and Phase 2 declared synthetic data-layer gate are complete. Phase 2's guarded Rust `studio-project` crate handles a tested subset of `.rbxl`, `.rbxm`, `.rbxlx`, and `.rbxmx`, with atomic local saves and recovery copies; local and GitHub Actions quality gates passed, and the Linux format baseline is recorded. This does not establish compatibility with arbitrary Studio projects. The native prototype, Linux build checks, and headless Wayland/X11 baseline passed GitHub Actions; the contracts cover all eight P0 workflows. This remains pre-product: no Studio workflow is implemented, no release environment is qualified, and no app is published. The prototype measures a generated hierarchy, long source buffer, and instanced renderer; it is not a usable Studio replacement. See the [roadmap](ROADMAP.md), [Linux support matrix](docs/platform/linux-support-matrix.md), and [measurement results](benchmarks/results/README.md).
+The Phase 0 architecture and measurement gate, Phase 1 REA/evidence gate, and Phase 2 declared synthetic data-layer gate are complete. Phase 2's guarded Rust `studio-project` crate handles a tested subset of `.rbxl`, `.rbxm`, `.rbxlx`, and `.rbxmx`, with atomic local saves and recovery copies; local and GitHub Actions quality gates passed, and the Linux format baseline is recorded. Phase 3 is in progress: the separate `studio-luau` crate embeds pinned official Luau 0.744 parsing, compilation, type analysis, and linting behind a Rust API, preserves source as written, and runs language-only jobs on bounded worker threads. The analyzer has no Roblox Engine definitions or project `require` resolver, and this is not editor integration or Studio playtest. The native prototype, Linux build checks, and headless Wayland/X11 baseline passed GitHub Actions; the contracts cover all eight P0 workflows. This remains pre-product: no Studio workflow is implemented, no release environment is qualified, and no app is published. The prototype measures a generated hierarchy, long source buffer, and instanced renderer; it is not a usable Studio replacement. See the [roadmap](ROADMAP.md), [Linux support matrix](docs/platform/linux-support-matrix.md), and [measurement results](benchmarks/results/README.md).
 
 ## Principles
 
@@ -16,6 +16,21 @@ The Phase 0 architecture and measurement gate, Phase 1 REA/evidence gate, and Ph
 - Prevent silent data loss and avoid optimizations without diagnosis and before/after measurements.
 - Keep the implementation and runtime native to Linux.
 - Use portable defaults and user configuration; do not hard-code developer-specific paths, credentials, accounts, or hardware assumptions.
+- Luau compiler/type diagnostics and the language-only runner do not imply Roblox Engine or Studio compatibility. The analyzer has no Roblox Engine definitions; missing APIs must stay visibly unsupported until implemented and tested.
+
+## Building
+
+Clone with submodules because the official Luau source is pinned under `vendor/luau`:
+
+```sh
+git clone --recurse-submodules https://github.com/Rovewake/roblox-studio-linux.git
+```
+
+Build and test with the pinned Rust toolchain, CMake, a C++17 compiler, and a CMake build tool such as GNU Make available:
+
+```sh
+cargo test --locked --workspace
+```
 
 ## Project documentation
 
