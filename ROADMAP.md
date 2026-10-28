@@ -11,6 +11,7 @@
 - Do not access or research Roblox terms, rules, policies, legal pages, moderation, or other normative materials. Technical documentation for APIs, the engine, and formats may be consulted when needed.
 - The repository currently contains no product code, build system, benchmarks, or test corpus. Therefore, phases are ordered by dependency, without calendar estimates; estimates will be made after the Phase 0 technical spikes.
 - The long-term goal is full coverage of the Studio workflows inventoried by this project. Intermediate releases may have narrower scope, but must clearly state what works, what is partial, and what does not exist yet.
+- This is a distributable product for Linux creators beyond the repository owner, not a personal setup. Do not hard-code author-specific paths, usernames, credentials, account IDs, device names, display settings, or hardware assumptions; use runtime discovery, XDG Base Directory conventions where appropriate, and documented user configuration.
 
 ## Definition of success
 
@@ -69,6 +70,7 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 - Pin a version of original Studio as the reference. Record SHA-256 hashes of analyzed executables, the Windows system version used as the oracle, resolution/scale, GPU, driver, and relevant settings.
 - Set up reference Linux machines or sessions; target x86_64 first and choose the initial set of distributions, GPUs, and graphical sessions.
 - Define a Linux-only support matrix for releases, covering supported distributions, CPU architectures, GPUs, drivers, and desktop sessions. Identify suitable Linux CI runners and the build, install, and smoke checks needed before advertising each target.
+- Define the user-facing configuration surface and per-user storage locations using XDG Base Directory conventions where appropriate. Ensure the application can start from a clean user profile without files, credentials, or settings from the development machine.
 - Record the original Studio baseline for equivalent workflows: cold/warm startup, open, save, switch tools, edit properties, run playtest, and navigate small, medium, and large scenes.
 - Treat this baseline as a comparison and regression guard, not a performance limit. After initial measurements, select at least one frequent P0 workflow for an optimization goal beyond parity.
 - Create ADRs comparing candidates for language, UI, renderer, scene storage, Luau integration, packaging, and plugin system. Do not lock in the stack before measuring a prototype with a large tree, long code, and a 3D viewport.
@@ -121,6 +123,7 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 **Goal:** build the native work experience and the first real vertical slice.
 
 - Implement the window, documents/tabs, shortcuts, preferences, menus, and persistent layout.
+- Store per-user preferences, cache, logs, and application data in appropriate XDG user-scoped locations; let users choose project paths and do not rely on fixed absolute paths.
 - Deliver hierarchy/Explorer, property inspector, selection, common operations, undo/redo, and script editing.
 - Open a local project, modify a property and a script, save, close, reopen, and recover the exact changes.
 - Add autosave, atomic saving, an unsaved-changes indicator, failure warnings, and session recovery without overwriting the original.
@@ -186,6 +189,7 @@ These are proposed priorities. Phase 0 must confirm them through a workflow inve
 - Choose Linux packaging (Flatpak, distribution package, or another method) in an ADR with clear update, file permission, desktop integration, and rollback behavior.
 - Complete the GitHub release workflow for every Linux distribution and architecture in the published support matrix. Build each artifact natively on Linux from a clean checkout, run its release gates, attach checksums and dependency/license metadata, and publish notes describing supported systems and limitations. Do not claim hardware coverage from runners that do not match the supported GPU and desktop matrix.
 - Publish actual requirements, compatibility matrix, known limitations, crash reporting process, and release notes.
+- Verify installation, first launch, configuration, update, and removal from clean Linux user profiles on the advertised distribution matrix; document data locations and migration behavior.
 
 **Exit gate:** all P0, stability, and performance gates are green; no critical data-loss defect remains; the support matrix and limitations match what was actually tested.
 
@@ -205,6 +209,7 @@ A release cannot advance to beta or 1.0 with a red release gate. A P95 regressio
 | Viewport | P95 and P99 frame time in reference scenes; hitches >100 ms per minute | Initial target: 60 FPS on recommended hardware (P95 ≤16.7 ms), minimum 30 FPS on minimum hardware (P95 ≤33.3 ms); record p99 and hitches. |
 | Memory/CPU | PSS/RSS at idle and with P50/P90 scenes; idle CPU after warmup; soak growth | Working memory ≤1.5× the equivalent Windows baseline before beta and ≤1.25× before 1.0; idle CPU <3% of one logical core; no continuous growth after warmup. |
 | Native Linux | Builds and smoke tests by distro, GPU, and graphical session | No Windows/Wine component in the runtime; 100% of announced environments pass P0 smoke workflows. |
+| User portability | Clean-profile install and launch; configuration and data-path behavior | 100% of advertised Linux environments work without author-specific files or settings; no hard-coded personal paths or credentials; user data locations and configuration are documented. |
 | Optimization discipline | Performance changes with diagnosis and reproducible comparison | 100% of accepted optimizations have before/after evidence beyond measurement variation; zero speculative optimization without an identified bottleneck. |
 | Build and release | Clean builds, artifacts, and reproducible dependencies for each advertised Linux distribution/architecture | Reproducible Linux x86_64 build from a clean checkout, plus passing native build/install checks for every additional advertised Linux distribution and architecture; dependencies and licenses inventoried; packages, checksums, and rollback documented. |
 
