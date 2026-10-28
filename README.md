@@ -6,7 +6,7 @@ This is intended to become a distributable tool for Linux creators beyond the re
 
 ## Status
 
-The project is in the planning and research stage. There is no application code, build, or release yet. The [roadmap](ROADMAP.md) defines phases, exit criteria, quality and performance metrics, and open technical decisions.
+The REA lab and evidence-based contracts for all eight P0 workflows are complete. The project is still pre-implementation: there is no native application code, build, executable acceptance suite, or release. Phase 0 architecture decisions, Linux baselines, and the native rendering prototype remain ahead of product implementation. The [roadmap](ROADMAP.md) defines phases, exit criteria, quality and performance metrics, and open technical decisions.
 
 ## Principles
 
