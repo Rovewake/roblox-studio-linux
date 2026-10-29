@@ -16,5 +16,6 @@ rbx_reflection_database = { version = "=3.0.1", features = ["debug_always_use_bu
 rbx_xml = "=3.0.1"
 rustix = { version = "=0.38.44", features = ["fs"] }
 thiserror = "=2.0.18"
+stylua_lib = { package = "stylua", version = "=2.6.0", default-features = false, features = ["luau"] }
 xml-rs = "=1.0.0"
 zstd = "=0.13.2"

@@ -7,6 +7,7 @@ publish = false
 build = "build.rs"
 
 [dependencies]
+stylua_lib.workspace = true
 thiserror.workspace = true
 
 [build-dependencies]

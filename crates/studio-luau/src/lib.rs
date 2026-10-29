@@ -19,6 +19,7 @@ use std::{
     time::Duration,
 };
 
+use stylua_lib::{LineEndings, LuaVersion, OutputVerification, SortRequiresConfig};
 use thiserror::Error;
 
 const MAX_SOURCE_BYTES: usize = 2 * 1024 * 1024;
@@ -186,6 +187,113 @@ impl ScriptDocument {
     pub fn set_source(&mut self, source: impl Into<String>) {
         self.source = Arc::from(source.into());
     }
+}
+
+/// A non-mutating result from the explicit Luau format-preview operation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FormatPreview {
+    /// The proposed source text. The caller must explicitly apply it as an
+    /// undoable editor change after presenting the preview to the user.
+    pub formatted_source: String,
+    /// Whether the formatter proposed any text changes.
+    pub changed: bool,
+}
+
+/// Why a formatting preview could not be produced safely.
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
+pub enum FormatError {
+    /// Source exceeded the same bounded size accepted by the Luau compiler.
+    #[error("script source exceeds the {limit}-byte formatting limit ({actual} bytes)")]
+    SourceTooLarge { actual: usize, limit: usize },
+    /// The formatter only accepts uniform LF or CRLF line endings.
+    #[error("formatting preview requires uniform LF or CRLF line endings")]
+    UnsupportedLineEndings,
+    /// The pinned Luau compiler did not accept the input source.
+    #[error("source is not accepted by the pinned Luau compiler: {0}")]
+    InvalidLuau(String),
+    /// StyLua rejected the input or could not verify its formatted AST.
+    #[error("StyLua could not produce a verified formatting preview: {0}")]
+    FormatterRejected(String),
+    /// The formatter output is not accepted by the pinned Luau compiler.
+    #[error("formatted output is not accepted by the pinned Luau compiler: {0}")]
+    InvalidFormatterOutput(String),
+    /// Formatted output exceeded the source-size limit.
+    #[error("formatted source exceeds the {limit}-byte limit ({actual} bytes)")]
+    FormattedSourceTooLarge { actual: usize, limit: usize },
+}
+
+/// Produce a Luau formatting preview without modifying the source document.
+///
+/// StyLua's parser is independent from Luau's official parser. The input and
+/// output are therefore both checked by the pinned Luau compiler, in addition
+/// to StyLua's full AST verification. Formatting can be expensive and has no
+/// cancellation API; callers must run this function away from the UI thread.
+pub fn format_preview(document: &ScriptDocument) -> Result<FormatPreview, FormatError> {
+    let source = document.source();
+    if source.len() > MAX_SOURCE_BYTES {
+        return Err(FormatError::SourceTooLarge {
+            actual: source.len(),
+            limit: MAX_SOURCE_BYTES,
+        });
+    }
+
+    let line_endings = detect_uniform_line_endings(source)?;
+    compile(document).map_err(|error| FormatError::InvalidLuau(error.to_string()))?;
+
+    let config = stylua_lib::Config {
+        syntax: LuaVersion::Luau,
+        line_endings,
+        sort_requires: SortRequiresConfig { enabled: false },
+        ..Default::default()
+    };
+
+    let formatted_source = stylua_lib::format_code(source, config, None, OutputVerification::Full)
+        .map_err(|error| FormatError::FormatterRejected(error.to_string()))?;
+
+    if formatted_source.len() > MAX_SOURCE_BYTES {
+        return Err(FormatError::FormattedSourceTooLarge {
+            actual: formatted_source.len(),
+            limit: MAX_SOURCE_BYTES,
+        });
+    }
+    compile(&ScriptDocument::new(formatted_source.clone()))
+        .map_err(|error| FormatError::InvalidFormatterOutput(error.to_string()))?;
+
+    Ok(FormatPreview {
+        changed: formatted_source != source,
+        formatted_source,
+    })
+}
+
+fn detect_uniform_line_endings(source: &str) -> Result<LineEndings, FormatError> {
+    let bytes = source.as_bytes();
+    let mut saw_lf = false;
+    let mut saw_crlf = false;
+    let mut index = 0;
+
+    while index < bytes.len() {
+        match bytes[index] {
+            b'\r' if bytes.get(index + 1) == Some(&b'\n') => {
+                saw_crlf = true;
+                index += 2;
+            }
+            b'\r' => return Err(FormatError::UnsupportedLineEndings),
+            b'\n' => {
+                saw_lf = true;
+                index += 1;
+            }
+            _ => index += 1,
+        }
+    }
+
+    if saw_lf && saw_crlf {
+        return Err(FormatError::UnsupportedLineEndings);
+    }
+    Ok(if saw_crlf {
+        LineEndings::Windows
+    } else {
+        LineEndings::Unix
+    })
 }
 
 /// Node kind in a project snapshot supplied to the Luau Frontend.
@@ -1514,6 +1622,60 @@ mod tests {
             .start(&ScriptDocument::new(source), ExecutionLimits::default())
             .expect("worker should start")
             .wait()
+    }
+
+    #[test]
+    fn format_preview_is_repeatable_and_does_not_mutate_the_document() {
+        let document = ScriptDocument::new(
+            "--!strict\nlocal function add( left : number,right:number ):number return left+right end\nprint(add(2,3))\n",
+        );
+        let original = document.clone();
+
+        let preview = format_preview(&document).expect("valid Luau should have a preview");
+        assert!(preview.changed);
+        assert_eq!(document, original);
+        compile(&ScriptDocument::new(preview.formatted_source.clone()))
+            .expect("the pinned Luau compiler should accept formatted output");
+
+        let second = format_preview(&ScriptDocument::new(preview.formatted_source.clone()))
+            .expect("formatted source should remain formattable");
+        assert!(!second.changed);
+        assert_eq!(second.formatted_source, preview.formatted_source);
+    }
+
+    #[test]
+    fn format_preview_keeps_crlf_and_does_not_sort_requires() {
+        let document = ScriptDocument::new(
+            "local z = require(\"z\")\r\nlocal a = require(\"a\")\r\nprint(z, a)\r\n",
+        );
+        let preview = format_preview(&document).expect("uniform CRLF Luau should format");
+
+        assert!(preview.formatted_source.contains("\r\n"));
+        assert!(!preview.formatted_source.replace("\r\n", "").contains('\n'));
+        assert!(
+            preview.formatted_source.find("local z").unwrap()
+                < preview.formatted_source.find("local a").unwrap()
+        );
+        assert!(document.source().contains("local z = require(\"z\")\r\n"));
+    }
+
+    #[test]
+    fn format_preview_rejects_invalid_source_and_mixed_line_endings_without_edits() {
+        let invalid = ScriptDocument::new("local value = \n");
+        let original_invalid = invalid.clone();
+        assert!(matches!(
+            format_preview(&invalid),
+            Err(FormatError::InvalidLuau(_))
+        ));
+        assert_eq!(invalid, original_invalid);
+
+        let mixed = ScriptDocument::new("local first = 1\r\nlocal second = 2\n");
+        let original_mixed = mixed.clone();
+        assert_eq!(
+            format_preview(&mixed),
+            Err(FormatError::UnsupportedLineEndings)
+        );
+        assert_eq!(mixed, original_mixed);
     }
 
     #[test]
