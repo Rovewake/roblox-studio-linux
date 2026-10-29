@@ -73,6 +73,7 @@ typedef struct StudioLuauRunResult {
 } StudioLuauRunResult;
 
 typedef struct StudioLuauControl StudioLuauControl;
+typedef void (*StudioLuauDebugEventCallback)(void* user_data, uint32_t line);
 
 int32_t studio_luau_compile(const char* source, size_t source_size, StudioLuauCompileResult* result);
 void studio_luau_compile_result_free(StudioLuauCompileResult* result);
@@ -108,6 +109,7 @@ int32_t studio_luau_find_local_definition(
 
 StudioLuauControl* studio_luau_control_new(void);
 void studio_luau_control_cancel(StudioLuauControl* control);
+void studio_luau_control_resume(StudioLuauControl* control);
 void studio_luau_control_free(StudioLuauControl* control);
 
 int32_t studio_luau_run(
@@ -116,6 +118,18 @@ int32_t studio_luau_run(
     uint64_t memory_limit_bytes,
     uint64_t timeout_millis,
     StudioLuauControl* control,
+    StudioLuauRunResult* result
+);
+int32_t studio_luau_debug_run(
+    const uint8_t* bytecode,
+    size_t bytecode_size,
+    const uint32_t* breakpoint_lines,
+    size_t breakpoint_count,
+    uint64_t memory_limit_bytes,
+    uint64_t timeout_millis,
+    StudioLuauControl* control,
+    StudioLuauDebugEventCallback event_callback,
+    void* event_user_data,
     StudioLuauRunResult* result
 );
 void studio_luau_run_result_free(StudioLuauRunResult* result);

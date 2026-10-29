@@ -1,4 +1,4 @@
-//! A Linux-native Luau compiler and bounded, language-only execution service.
+//! A Linux-native Luau compiler and bounded, language-only execution/debug service.
 //!
 //! This crate intentionally does not implement Roblox `Instance`, services,
 //! scheduling, physics, or Studio behavior. Its execution API is for bounded
@@ -6,14 +6,14 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    ffi::{CStr, c_char},
+    ffi::{CStr, c_char, c_void},
     io,
     ptr::{self, NonNull},
     slice,
     sync::{
         Arc,
         atomic::{AtomicUsize, Ordering},
-        mpsc::{self, Receiver, TryRecvError},
+        mpsc::{self, Receiver, SyncSender, TryRecvError},
     },
     thread::{self, JoinHandle},
     time::Duration,
@@ -27,6 +27,7 @@ const MIN_VM_MEMORY_BYTES: u64 = 1024 * 1024;
 const MAX_VM_MEMORY_BYTES: u64 = 256 * 1024 * 1024;
 const MAX_TIMEOUT: Duration = Duration::from_secs(60);
 const MAX_WORKERS: usize = 16;
+const MAX_DEBUG_BREAKPOINTS: usize = 256;
 const MAX_ANALYSIS_NODES: usize = 100_000;
 const MAX_ANALYSIS_MODULES: usize = 512;
 const MAX_ANALYSIS_SOURCE_BYTES: usize = 16 * 1024 * 1024;
@@ -148,6 +149,7 @@ unsafe extern "C" {
 
     fn studio_luau_control_new() -> *mut NativeControl;
     fn studio_luau_control_cancel(control: *mut NativeControl);
+    fn studio_luau_control_resume(control: *mut NativeControl);
     fn studio_luau_control_free(control: *mut NativeControl);
 
     fn studio_luau_run(
@@ -156,6 +158,18 @@ unsafe extern "C" {
         memory_limit_bytes: u64,
         timeout_millis: u64,
         control: *mut NativeControl,
+        result: *mut NativeRunResult,
+    ) -> i32;
+    fn studio_luau_debug_run(
+        bytecode: *const u8,
+        bytecode_size: usize,
+        breakpoint_lines: *const u32,
+        breakpoint_count: usize,
+        memory_limit_bytes: u64,
+        timeout_millis: u64,
+        control: *mut NativeControl,
+        event_callback: unsafe extern "C" fn(*mut c_void, u32),
+        event_user_data: *mut c_void,
         result: *mut NativeRunResult,
     ) -> i32;
     fn studio_luau_run_result_free(result: *mut NativeRunResult);
@@ -1133,6 +1147,8 @@ pub enum ExecutionStatus {
     TimedOut,
     /// The VM memory allocation limit was reached.
     MemoryLimitExceeded,
+    /// The debugger could not install the requested breakpoint or resume state.
+    DebuggerError(String),
     /// The native bridge failed unexpectedly.
     InternalError(String),
 }
@@ -1143,6 +1159,13 @@ pub struct ExecutionResult {
     pub status: ExecutionStatus,
     /// Captured `print` output, capped at 1 MiB per execution.
     pub output: String,
+}
+
+/// A bounded event from a language-only debug session.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DebugEvent {
+    /// Luau stopped at the executable entry-script line selected for a breakpoint.
+    BreakpointHit { line: u32 },
 }
 
 /// A bounded pool of workers for compile-and-run jobs.
@@ -1222,6 +1245,81 @@ impl ExecutionService {
         })
     }
 
+    /// Start a language-only debug session with breakpoints in the entry script.
+    ///
+    /// Breakpoint lines are one-based; at most 256 requested entries are
+    /// accepted and duplicates are deduplicated. Luau may move a breakpoint to
+    /// the next executable line, which is reported in
+    /// [`DebugEvent::BreakpointHit`]. The execution deadline includes time spent
+    /// paused. Only the entry chunk is supported; stepping, local inspection,
+    /// nested module scripts, and coroutine debugging are not implemented.
+    /// Poll [`DebugExecutionHandle::try_event`] and [`DebugExecutionHandle::try_result`]
+    /// from the UI loop. Do not wait on a paused session from the UI thread.
+    pub fn start_debug(
+        &self,
+        document: &ScriptDocument,
+        breakpoint_lines: &[u32],
+        limits: ExecutionLimits,
+    ) -> Result<DebugExecutionHandle, ExecutionServiceError> {
+        validate_limits(limits)?;
+        if document.source.len() > MAX_SOURCE_BYTES {
+            return Err(ExecutionServiceError::SourceTooLarge {
+                actual: document.source.len(),
+                limit: MAX_SOURCE_BYTES,
+            });
+        }
+        if breakpoint_lines.len() > MAX_DEBUG_BREAKPOINTS {
+            return Err(ExecutionServiceError::TooManyBreakpoints {
+                actual: breakpoint_lines.len(),
+                limit: MAX_DEBUG_BREAKPOINTS,
+            });
+        }
+        let mut breakpoint_lines = breakpoint_lines.to_vec();
+        breakpoint_lines.sort_unstable();
+        breakpoint_lines.dedup();
+        if let Some(line) = breakpoint_lines
+            .iter()
+            .copied()
+            .find(|line| *line == 0 || *line > i32::MAX as u32)
+        {
+            return Err(ExecutionServiceError::InvalidBreakpointLine(line));
+        }
+        self.reserve_worker()?;
+
+        let slot = WorkerSlot(Arc::clone(&self.active_workers));
+        let (event_sender, event_receiver) = mpsc::sync_channel(1);
+        let (result_sender, result_receiver) = mpsc::channel();
+        let control = Arc::new(NativeCancellation::new()?);
+        let control_for_worker = Arc::clone(&control);
+        let document = document.clone();
+        let timeout_millis = limits.timeout.as_millis() as u64;
+        let memory_limit_bytes = limits.vm_memory_bytes;
+
+        let worker = thread::Builder::new()
+            .name("studio-luau-debug-worker".to_owned())
+            .spawn(move || {
+                let result = compile_and_debug_run(
+                    &document,
+                    &breakpoint_lines,
+                    timeout_millis,
+                    memory_limit_bytes,
+                    &control_for_worker,
+                    &event_sender,
+                );
+                let _ = result_sender.send(result);
+                drop(slot);
+            })?;
+
+        Ok(DebugExecutionHandle {
+            event_receiver,
+            result_receiver,
+            worker: Some(worker),
+            control,
+            completed: false,
+            paused: false,
+        })
+    }
+
     fn reserve_worker(&self) -> Result<(), ExecutionServiceError> {
         let mut current = self.active_workers.load(Ordering::Acquire);
         loop {
@@ -1239,6 +1337,85 @@ impl ExecutionService {
                 Ok(_) => return Ok(()),
                 Err(actual) => current = actual,
             }
+        }
+    }
+}
+
+/// Nonblocking control for a bounded language-only debug session.
+pub struct DebugExecutionHandle {
+    event_receiver: Receiver<DebugEvent>,
+    result_receiver: Receiver<ExecutionResult>,
+    worker: Option<JoinHandle<()>>,
+    control: Arc<NativeCancellation>,
+    completed: bool,
+    paused: bool,
+}
+
+impl DebugExecutionHandle {
+    /// Request cancellation. Cancellation wakes a session paused at a breakpoint.
+    pub fn cancel(&self) {
+        self.control.cancel();
+    }
+
+    /// Read a breakpoint event without waiting.
+    pub fn try_event(&mut self) -> Option<DebugEvent> {
+        if self.completed || self.paused {
+            return None;
+        }
+        match self.event_receiver.try_recv() {
+            Ok(event) => {
+                self.paused = true;
+                Some(event)
+            }
+            Err(TryRecvError::Empty | TryRecvError::Disconnected) => None,
+        }
+    }
+
+    /// Resume after receiving a breakpoint event.
+    pub fn resume(&mut self) -> bool {
+        if !self.paused || self.completed {
+            return false;
+        }
+        self.paused = false;
+        self.control.resume();
+        true
+    }
+
+    /// Check for a terminal result without waiting.
+    pub fn try_result(&mut self) -> Option<ExecutionResult> {
+        if self.completed {
+            return None;
+        }
+        match self.result_receiver.try_recv() {
+            Ok(result) => {
+                self.completed = true;
+                self.release_worker_handle_without_waiting();
+                Some(result)
+            }
+            Err(TryRecvError::Empty) => None,
+            Err(TryRecvError::Disconnected) => {
+                self.completed = true;
+                self.release_worker_handle_without_waiting();
+                Some(internal_result(
+                    "Luau debug worker exited without returning a result",
+                ))
+            }
+        }
+    }
+
+    fn release_worker_handle_without_waiting(&mut self) {
+        if let Some(worker) = self.worker.take()
+            && worker.is_finished()
+        {
+            let _ = worker.join();
+        }
+    }
+}
+
+impl Drop for DebugExecutionHandle {
+    fn drop(&mut self) {
+        if !self.completed {
+            self.control.cancel();
         }
     }
 }
@@ -1324,6 +1501,10 @@ pub enum ExecutionServiceError {
     WorkerLimitReached { limit: usize },
     #[error("script source exceeds the {limit}-byte execution limit ({actual} bytes)")]
     SourceTooLarge { actual: usize, limit: usize },
+    #[error("debug sessions support at most {limit} breakpoints, got {actual}")]
+    TooManyBreakpoints { actual: usize, limit: usize },
+    #[error("debug breakpoint line must be between 1 and 2147483647, got {0}")]
+    InvalidBreakpointLine(u32),
     #[error("execution timeout must be greater than zero and no more than 60 seconds")]
     InvalidTimeout,
     #[error("VM memory limit must be between 1 MiB and 256 MiB")]
@@ -1338,9 +1519,10 @@ struct NativeCancellation {
     raw: NonNull<NativeControl>,
 }
 
-// SAFETY: the opaque native control contains only an atomic cancellation flag.
+// SAFETY: cancellation uses an atomic flag and debugger commands/events use
+// native mutex and condition-variable synchronization.
 unsafe impl Send for NativeCancellation {}
-// SAFETY: cancellation is the only operation shared across the worker boundary.
+// SAFETY: all cross-thread operations are synchronized in the native control.
 unsafe impl Sync for NativeCancellation {}
 
 impl NativeCancellation {
@@ -1354,8 +1536,14 @@ impl NativeCancellation {
 
     fn cancel(&self) {
         // SAFETY: the pointer stays valid while this Arc is alive; the native
-        // function only sets its atomic cancellation flag.
+        // function sets the cancellation flag and wakes any debugger pause.
         unsafe { studio_luau_control_cancel(self.raw.as_ptr()) };
+    }
+
+    fn resume(&self) {
+        // SAFETY: the pointer stays valid while this Arc is alive; the native
+        // function updates the resume command under its debugger mutex.
+        unsafe { studio_luau_control_resume(self.raw.as_ptr()) };
     }
 }
 
@@ -1478,6 +1666,98 @@ fn compile_and_run(
         4 => ExecutionStatus::MemoryLimitExceeded,
         _ => ExecutionStatus::InternalError(if message.is_empty() {
             format!("native runtime bridge returned status {bridge_status}")
+        } else {
+            message
+        }),
+    };
+    drop(guard);
+
+    ExecutionResult { status, output }
+}
+
+unsafe extern "C" fn debug_event_callback(user_data: *mut c_void, line: u32) {
+    if user_data.is_null() {
+        return;
+    }
+    // SAFETY: `compile_and_debug_run` passes a live SyncSender pointer for the
+    // full native call; the callback never retains the pointer.
+    let sender = unsafe { &*user_data.cast::<SyncSender<DebugEvent>>() };
+    let _ = sender.try_send(DebugEvent::BreakpointHit { line });
+}
+
+fn compile_and_debug_run(
+    document: &ScriptDocument,
+    breakpoint_lines: &[u32],
+    timeout_millis: u64,
+    memory_limit_bytes: u64,
+    control: &NativeCancellation,
+    event_sender: &SyncSender<DebugEvent>,
+) -> ExecutionResult {
+    let compiled = match compile(document) {
+        Ok(compiled) => compiled,
+        Err(CompileFailure::Diagnostics(diagnostics)) => {
+            return ExecutionResult {
+                status: ExecutionStatus::CompileDiagnostics(diagnostics),
+                output: String::new(),
+            };
+        }
+        Err(error) => {
+            return ExecutionResult {
+                status: ExecutionStatus::CompileRejected(error.to_string()),
+                output: String::new(),
+            };
+        }
+    };
+
+    let mut native_result = NativeRunResult {
+        status: 5,
+        line: 0,
+        column: 0,
+        output: ptr::null_mut(),
+        output_size: 0,
+        message: ptr::null_mut(),
+    };
+    let event_user_data = (event_sender as *const SyncSender<DebugEvent>)
+        .cast_mut()
+        .cast::<c_void>();
+    // SAFETY: bytecode, breakpoint lines, event sender, and control remain
+    // alive for the full call; the native result is released below.
+    let bridge_status = unsafe {
+        studio_luau_debug_run(
+            compiled.bytecode.as_ptr(),
+            compiled.bytecode.len(),
+            breakpoint_lines.as_ptr(),
+            breakpoint_lines.len(),
+            memory_limit_bytes,
+            timeout_millis,
+            control.raw.as_ptr(),
+            debug_event_callback,
+            event_user_data,
+            &mut native_result,
+        )
+    };
+    let guard = RunResultGuard(&mut native_result);
+
+    let output = if native_result.output.is_null() || native_result.output_size == 0 {
+        String::new()
+    } else {
+        // SAFETY: the native bridge owns output_size initialized bytes until
+        // RunResultGuard releases its result.
+        let bytes =
+            unsafe { slice::from_raw_parts(native_result.output, native_result.output_size) };
+        String::from_utf8_lossy(bytes).into_owned()
+    };
+    let message = native_message(native_result.message);
+    let line = native_result.line;
+    let status = match native_result.status {
+        0 => ExecutionStatus::Completed,
+        1 => ExecutionStatus::RuntimeError(runtime_diagnostic(line, message)),
+        2 => ExecutionStatus::Cancelled,
+        3 => ExecutionStatus::TimedOut,
+        4 => ExecutionStatus::MemoryLimitExceeded,
+        6 => ExecutionStatus::DebuggerError(format!("breakpoint line {line}: {message}")),
+        _ => ExecutionStatus::InternalError(if message.is_empty() {
+            format!("native debugger bridge returned status {bridge_status}")
         } else {
             message
         }),
@@ -1622,6 +1902,37 @@ mod tests {
             .start(&ScriptDocument::new(source), ExecutionLimits::default())
             .expect("worker should start")
             .wait()
+    }
+
+    fn wait_for_debug_event(handle: &mut DebugExecutionHandle) -> DebugEvent {
+        let deadline = std::time::Instant::now() + Duration::from_secs(2);
+        loop {
+            if let Some(event) = handle.try_event() {
+                return event;
+            }
+            if let Some(result) = handle.try_result() {
+                panic!("debug session ended before breakpoint: {result:?}");
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "debug event timed out"
+            );
+            thread::sleep(Duration::from_millis(1));
+        }
+    }
+
+    fn wait_for_debug_result(handle: &mut DebugExecutionHandle) -> ExecutionResult {
+        let deadline = std::time::Instant::now() + Duration::from_secs(3);
+        loop {
+            if let Some(result) = handle.try_result() {
+                return result;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "debug result timed out"
+            );
+            thread::sleep(Duration::from_millis(1));
+        }
     }
 
     #[test]
@@ -2219,6 +2530,147 @@ mod tests {
         handle.cancel();
         let result = handle.wait();
         assert_eq!(result.status, ExecutionStatus::Cancelled);
+    }
+
+    #[test]
+    fn language_debugger_pauses_at_entry_breakpoint_and_continues() {
+        let source = "local value = 1\nprint(\"before\")\nvalue = value + 1\nprint(value)\n";
+        let service = ExecutionService::default();
+        let mut session = service
+            .start_debug(
+                &ScriptDocument::new(source),
+                &[3, 3],
+                ExecutionLimits::default(),
+            )
+            .expect("debug worker should start");
+
+        assert_eq!(
+            wait_for_debug_event(&mut session),
+            DebugEvent::BreakpointHit { line: 3 }
+        );
+        assert!(session.resume());
+        assert!(
+            !session.resume(),
+            "resume is accepted only after a stop event"
+        );
+        let result = wait_for_debug_result(&mut session);
+        assert_eq!(result.status, ExecutionStatus::Completed);
+        assert_eq!(result.output, "before\n2\n");
+    }
+
+    #[test]
+    fn language_debugger_cancellation_wakes_a_paused_session() {
+        let service = ExecutionService::default();
+        let limits = ExecutionLimits {
+            timeout: Duration::from_secs(5),
+            ..ExecutionLimits::default()
+        };
+        for _ in 0..16 {
+            let mut session = service
+                .start_debug(
+                    &ScriptDocument::new("print(\"before\")\nprint(\"after\")\n"),
+                    &[2],
+                    limits,
+                )
+                .expect("debug worker should start");
+            assert_eq!(
+                wait_for_debug_event(&mut session),
+                DebugEvent::BreakpointHit { line: 2 }
+            );
+
+            let cancelled_at = std::time::Instant::now();
+            session.cancel();
+            let result = wait_for_debug_result(&mut session);
+            assert_eq!(result.status, ExecutionStatus::Cancelled);
+            assert_eq!(result.output, "before\n");
+            assert!(
+                cancelled_at.elapsed() < Duration::from_secs(1),
+                "cancellation should wake a paused worker promptly"
+            );
+        }
+    }
+
+    #[test]
+    fn language_debugger_deadline_includes_paused_time() {
+        let service = ExecutionService::default();
+        let limits = ExecutionLimits {
+            timeout: Duration::from_millis(250),
+            ..ExecutionLimits::default()
+        };
+        let mut session = service
+            .start_debug(
+                &ScriptDocument::new("print(\"before\")\nprint(\"after\")\n"),
+                &[2],
+                limits,
+            )
+            .expect("debug worker should start");
+        assert_eq!(
+            wait_for_debug_event(&mut session),
+            DebugEvent::BreakpointHit { line: 2 }
+        );
+        thread::sleep(Duration::from_millis(300));
+
+        let result = wait_for_debug_result(&mut session);
+        assert_eq!(result.status, ExecutionStatus::TimedOut);
+        assert_eq!(result.output, "before\n");
+    }
+
+    #[test]
+    fn language_debugger_rejects_invalid_breakpoint_lines_before_scheduling() {
+        let service = ExecutionService::default();
+        assert!(matches!(
+            service.start_debug(
+                &ScriptDocument::new("return\n"),
+                &[0],
+                ExecutionLimits::default()
+            ),
+            Err(ExecutionServiceError::InvalidBreakpointLine(0))
+        ));
+        assert!(matches!(
+            service.start_debug(
+                &ScriptDocument::new("return\n"),
+                &[1; MAX_DEBUG_BREAKPOINTS + 1],
+                ExecutionLimits::default()
+            ),
+            Err(ExecutionServiceError::TooManyBreakpoints { .. })
+        ));
+    }
+
+    #[test]
+    fn language_debugger_reports_lines_without_executable_code() {
+        let service = ExecutionService::default();
+        let mut session = service
+            .start_debug(
+                &ScriptDocument::new("return\n"),
+                &[99],
+                ExecutionLimits::default(),
+            )
+            .expect("in-range breakpoint request should be scheduled");
+        let result = wait_for_debug_result(&mut session);
+        assert!(matches!(
+            result.status,
+            ExecutionStatus::DebuggerError(message) if message.contains("line 99")
+        ));
+    }
+
+    #[test]
+    fn language_debugger_discards_queued_events_after_terminal_result() {
+        let service = ExecutionService::default();
+        let limits = ExecutionLimits {
+            timeout: Duration::from_millis(250),
+            ..ExecutionLimits::default()
+        };
+        let mut session = service
+            .start_debug(
+                &ScriptDocument::new("print(\"before\")\nprint(\"after\")\n"),
+                &[2],
+                limits,
+            )
+            .expect("debug worker should start");
+
+        let result = wait_for_debug_result(&mut session);
+        assert_eq!(result.status, ExecutionStatus::TimedOut);
+        assert!(session.try_event().is_none());
     }
 
     #[test]

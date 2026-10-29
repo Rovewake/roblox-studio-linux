@@ -44,6 +44,9 @@
 
 struct StudioLuauControl {
     std::atomic<bool> cancelled{false};
+    std::mutex debug_mutex;
+    std::condition_variable debug_changed;
+    bool resume_requested = false;
 };
 
 std::string_view studio_luau_engine_type_definitions() noexcept;
@@ -66,6 +69,7 @@ constexpr int32_t kRunCancelled = 2;
 constexpr int32_t kRunTimedOut = 3;
 constexpr int32_t kRunMemoryLimit = 4;
 constexpr int32_t kRunInternalError = 5;
+constexpr int32_t kRunInvalidBreakpoint = 6;
 
 constexpr size_t kMaximumCapturedOutput = 1024 * 1024;
 constexpr char kOutputTruncatedMarker[] = "\n[output truncated at 1 MiB]\n";
@@ -83,6 +87,7 @@ constexpr size_t kMaximumExpressionDepth = 256;
 constexpr size_t kMaximumResolverNodeVisits = 250'000;
 constexpr size_t kMaximumCompletionItems = 256;
 constexpr size_t kMaximumCompletionLabelBytes = 512;
+constexpr size_t kMaximumDebugBreakpoints = 256;
 constexpr auto kMaximumProjectAnalysisTime = std::chrono::seconds(15);
 constexpr char kSingleScriptModuleId[] = "Script";
 
@@ -101,12 +106,18 @@ struct MemoryQuota {
 
 struct RunContext {
     StudioLuauControl* control = nullptr;
+    StudioLuauDebugEventCallback debug_event_callback = nullptr;
+    void* debug_event_user_data = nullptr;
     std::chrono::steady_clock::time_point deadline;
     MemoryQuota memory;
     std::string output;
     bool output_truncated = false;
     bool timed_out = false;
     bool cancelled = false;
+    bool debug_enabled = false;
+    bool skip_breakpoint_once = false;
+    uint32_t last_breakpoint_line = 0;
+    uint32_t paused_line = 0;
 };
 
 struct LuaStateGuard {
@@ -1178,6 +1189,49 @@ void interrupt_execution(lua_State* state, int)
     }
 }
 
+void debug_breakpoint(lua_State* state, lua_Debug* activation)
+{
+    auto* context = static_cast<RunContext*>(lua_callbacks(state)->userdata);
+    if (!context || !context->debug_enabled || !activation || activation->currentline <= 0)
+        return;
+
+    const uint32_t line = static_cast<uint32_t>(activation->currentline);
+    if (context->skip_breakpoint_once && line == context->last_breakpoint_line) {
+        context->skip_breakpoint_once = false;
+        return;
+    }
+
+    context->paused_line = line;
+    lua_break(state);
+}
+
+bool wait_for_debug_resume(RunContext& context)
+{
+    if (!context.control)
+        return false;
+
+    std::unique_lock lock(context.control->debug_mutex);
+    const bool signaled = context.control->debug_changed.wait_until(
+        lock,
+        context.deadline,
+        [&context] {
+            return context.control->cancelled.load(std::memory_order_relaxed) ||
+                context.control->resume_requested;
+        }
+    );
+    if (!signaled) {
+        context.timed_out = true;
+        return false;
+    }
+    if (context.control->cancelled.load(std::memory_order_relaxed)) {
+        context.cancelled = true;
+        return false;
+    }
+
+    context.control->resume_requested = false;
+    return true;
+}
+
 int missing_global(lua_State* state)
 {
     const char* name = lua_tostring(state, 2);
@@ -1574,8 +1628,26 @@ extern "C" StudioLuauControl* studio_luau_control_new(void)
 
 extern "C" void studio_luau_control_cancel(StudioLuauControl* control)
 {
-    if (control)
-        control->cancelled.store(true, std::memory_order_relaxed);
+    if (control) {
+        {
+            // Pair with the waiter's predicate check so cancellation cannot
+            // notify in the gap immediately before condition_variable::wait.
+            std::lock_guard lock(control->debug_mutex);
+            control->cancelled.store(true, std::memory_order_relaxed);
+        }
+        control->debug_changed.notify_all();
+    }
+}
+
+extern "C" void studio_luau_control_resume(StudioLuauControl* control)
+{
+    if (!control)
+        return;
+    {
+        std::lock_guard lock(control->debug_mutex);
+        control->resume_requested = true;
+    }
+    control->debug_changed.notify_one();
 }
 
 extern "C" void studio_luau_control_free(StudioLuauControl* control)
@@ -1583,12 +1655,17 @@ extern "C" void studio_luau_control_free(StudioLuauControl* control)
     delete control;
 }
 
-extern "C" int32_t studio_luau_run(
+static int32_t studio_luau_run_internal(
     const uint8_t* bytecode,
     size_t bytecode_size,
+    const uint32_t* breakpoint_lines,
+    size_t breakpoint_count,
     uint64_t memory_limit_bytes,
     uint64_t timeout_millis,
     StudioLuauControl* control,
+    bool debug_enabled,
+    StudioLuauDebugEventCallback event_callback,
+    void* event_user_data,
     StudioLuauRunResult* result
 )
 {
@@ -1596,8 +1673,30 @@ extern "C" int32_t studio_luau_run(
         return -1;
     *result = {};
 
+    if (debug_enabled && (!control || !event_callback ||
+            breakpoint_count > kMaximumDebugBreakpoints ||
+            (!breakpoint_lines && breakpoint_count != 0))) {
+        set_run_error(result, kRunInternalError, "invalid native debugger configuration");
+        return -1;
+    }
+    if (!debug_enabled && breakpoint_count != 0) {
+        set_run_error(result, kRunInternalError, "breakpoints require debugger mode");
+        return -1;
+    }
+    for (size_t index = 0; index < breakpoint_count; ++index) {
+        if (breakpoint_lines[index] == 0 ||
+            breakpoint_lines[index] > static_cast<uint32_t>(std::numeric_limits<int>::max())) {
+            result->line = breakpoint_lines[index];
+            set_run_error(result, kRunInvalidBreakpoint, "breakpoint line is outside the supported range");
+            return -1;
+        }
+    }
+
     RunContext context;
     context.control = control;
+    context.debug_enabled = debug_enabled;
+    context.debug_event_callback = event_callback;
+    context.debug_event_user_data = event_user_data;
     context.deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_millis);
     context.memory.limit = static_cast<size_t>(std::min<uint64_t>(
         memory_limit_bytes,
@@ -1618,6 +1717,8 @@ extern "C" int32_t studio_luau_run(
 
         lua_callbacks(guard.state)->userdata = &context;
         lua_callbacks(guard.state)->interrupt = interrupt_execution;
+        if (debug_enabled)
+            lua_callbacks(guard.state)->debugbreak = debug_breakpoint;
         open_safe_libraries(guard.state);
         luaL_sandbox(guard.state);
 
@@ -1655,7 +1756,60 @@ extern "C" int32_t studio_luau_run(
             return -1;
         }
 
-        const int call_status = lua_pcall(guard.state, 0, 0, 0);
+        if (debug_enabled) {
+            std::unordered_set<uint32_t> installed_lines;
+            for (size_t index = 0; index < breakpoint_count; ++index) {
+                const uint32_t requested_line = breakpoint_lines[index];
+                if (!installed_lines.insert(requested_line).second)
+                    continue;
+                const int resolved_line = lua_breakpoint(
+                    guard.state,
+                    -1,
+                    static_cast<int>(requested_line),
+                    1
+                );
+                if (resolved_line < 1) {
+                    result->line = requested_line;
+                    set_run_error(result, kRunInvalidBreakpoint, "no executable script line exists at or after breakpoint");
+                    return -1;
+                }
+            }
+        }
+
+        int call_status = debug_enabled
+            ? lua_resume(guard.state, nullptr, 0)
+            : lua_pcall(guard.state, 0, 0, 0);
+        while (debug_enabled && call_status == LUA_BREAK) {
+            if (context.paused_line == 0) {
+                set_run_error(result, kRunInternalError, "Luau debugger stopped without a source line");
+                return -1;
+            }
+            context.debug_event_callback(context.debug_event_user_data, context.paused_line);
+            context.last_breakpoint_line = context.paused_line;
+            if (!wait_for_debug_resume(context)) {
+                const int32_t status = context.cancelled
+                    ? kRunCancelled
+                    : (context.timed_out ? kRunTimedOut : kRunInternalError);
+                const char* message = context.cancelled
+                    ? "execution cancelled while paused at a breakpoint"
+                    : (context.timed_out ? "execution time limit expired while paused at a breakpoint"
+                                         : "debugger resume wait failed");
+                set_run_error(result, status, message);
+                finish_output(context);
+                copy_output(result, context.output);
+                return 1;
+            }
+            context.skip_breakpoint_once = true;
+            call_status = lua_resume(guard.state, nullptr, 0);
+        }
+
+        if (debug_enabled && call_status == LUA_YIELD) {
+            set_run_error(result, kRunRuntimeError, "coroutine yield is unsupported in the language-only debugger");
+            finish_output(context);
+            copy_output(result, context.output);
+            return 1;
+        }
+
         if (call_status == LUA_OK) {
             result->status = kRunCompleted;
             finish_output(context);
@@ -1692,6 +1846,58 @@ extern "C" int32_t studio_luau_run(
         set_run_error(result, kRunInternalError, "unknown native runtime error");
         return -1;
     }
+}
+
+extern "C" int32_t studio_luau_run(
+    const uint8_t* bytecode,
+    size_t bytecode_size,
+    uint64_t memory_limit_bytes,
+    uint64_t timeout_millis,
+    StudioLuauControl* control,
+    StudioLuauRunResult* result
+)
+{
+    return studio_luau_run_internal(
+        bytecode,
+        bytecode_size,
+        nullptr,
+        0,
+        memory_limit_bytes,
+        timeout_millis,
+        control,
+        false,
+        nullptr,
+        nullptr,
+        result
+    );
+}
+
+extern "C" int32_t studio_luau_debug_run(
+    const uint8_t* bytecode,
+    size_t bytecode_size,
+    const uint32_t* breakpoint_lines,
+    size_t breakpoint_count,
+    uint64_t memory_limit_bytes,
+    uint64_t timeout_millis,
+    StudioLuauControl* control,
+    StudioLuauDebugEventCallback event_callback,
+    void* event_user_data,
+    StudioLuauRunResult* result
+)
+{
+    return studio_luau_run_internal(
+        bytecode,
+        bytecode_size,
+        breakpoint_lines,
+        breakpoint_count,
+        memory_limit_bytes,
+        timeout_millis,
+        control,
+        true,
+        event_callback,
+        event_user_data,
+        result
+    );
 }
 
 extern "C" void studio_luau_run_result_free(StudioLuauRunResult* result)
