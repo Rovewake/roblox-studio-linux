@@ -317,7 +317,7 @@ struct ProjectFileResolver final : Luau::FileResolver {
         project_root = root_it->second;
         entry_script = entry_it->second;
         entry_module_name = "@studio-project-entry";
-        while (node_indices.contains(entry_module_name))
+        while (node_indices.find(entry_module_name) != node_indices.end())
             entry_module_name.insert(entry_module_name.begin(), '@');
 
         if (nodes[project_root].kind != STUDIO_LUAU_ANALYSIS_CONTAINER || !nodes[project_root].parent_id.empty()) {
