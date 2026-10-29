@@ -1,7 +1,7 @@
 # Phase 1 REA lab and environment audit
 
 **Date:** 2026-10-28
-**Status:** version resolution, acquisition, static package inventory, and P0 evidence-based contract specification complete. Native implementation and executable acceptance checks remain pending.
+**Status:** reference version resolution, acquisition, package inventory, and proposed P0 contract drafting are complete. The Phase 1 reverse-engineering gate remains open because the initial REA/Ghidra analysis attempts produced no usable Studio binary findings.
 **Scope:** record the REA setup, host/provider readiness, and the acquired Windows Studio reference package. The project has no Windows test environment, so this note contains no live Studio observations. The downloaded binary was not executed, and Windows execution is not a pending project setup task.
 
 ## REA source and version
@@ -44,16 +44,15 @@
 
 ## Phase 1 gate assessment
 
-**Passed for the REA lab and evidence/specification scope.** The version-pinned reference acquisition path and package provenance are recorded, and all eight P0 workflows now have proposed Linux contracts, technical evidence, confidence/limitations, and reproducible fixture or independent-implementation checks in [the P0 workflow contracts](../compatibility/p0-contracts.md). The contract document separates documented facts from project decisions and unknown Studio behavior.
-
-This gate does not mean that a native application, P0 implementation, or executable acceptance test exists. Those checks are pending implementation in later phases. The Ghidra string-search attempt timed out twice and produced no usable finding; the package inventory was limited to the downloaded ZIP payload. Neither is treated as evidence about runtime behavior. There is no Windows test environment, and Windows execution or comparison is not a requirement for this phase or project.
+**Not passed.** The reference acquisition path and package provenance are recorded, the provider-specific Ghidra readiness checks passed, and all eight P0 workflows have proposed Linux contracts. However, the actual REA searches timed out twice without usable findings, and the package inventory was limited to the downloaded ZIP payload. This is lab readiness and specification preparation, not completed reverse engineering. The contracts combine public technical sources and project decisions; they do not establish Studio behavior from the executable. Phase 1 remains open until the toolchain can reliably analyze the pinned target and produce binary-derived evidence notes for the prioritized P0 workflows. Each note must contain actionable findings or document a scoped, completed investigation that justifies leaving the behavior unknown; timeouts alone do not close the gate. No Windows test environment or execution is required.
 
 ## Next steps
 
-1. Implement the P0 contracts in priority order and turn each planned fixture into an executable Linux acceptance check.
-2. If a specific static question remains useful to an implementation, retry with a narrower analyzer profile or a smaller binary; do not treat either timed-out result as evidence.
-3. Build independent compatibility checks from documented contracts, public fixtures, and open-source implementations; state the coverage and limits of each.
-4. Before treating the acquisition script as update automation, revalidate the current client-version response schema and matching versioned archive behavior. Add the scheduled GitHub Actions check described in `ROADMAP.md`; it must publish metadata only and must not retain Roblox binaries in GitHub storage.
+1. Diagnose why whole-binary import/search timed out by separating file loading, analysis, and query time; try a smaller target region, focused symbols/imports, or REA's supported analysis settings.
+2. Establish a reproducible REA/Ghidra environment on this NixOS host or an isolated supported Linux environment. Prefer the simplest pinned wrapper, development shell, or supported container. Keep the solution owned by the agent; fork REA or Ghidra only if simpler approaches fail, and then track minimal patches and reproducible checks.
+3. Produce the first useful REA note on a specific P0 subsystem (starting with current UI framework/component inventory), then repeat this for the other P0 contracts. Do not turn timeout or missing results into evidence.
+4. Build Linux fixtures and independent compatibility checks from the resulting behavior specifications, public contracts, and open-source implementations; state their coverage and limits.
+5. Before treating the acquisition script as update automation, revalidate the current client-version response schema and matching versioned archive behavior. Add the scheduled GitHub Actions check described in `ROADMAP.md`; it must publish metadata only and must not retain Roblox binaries in GitHub storage.
 
 ## Sources
 
