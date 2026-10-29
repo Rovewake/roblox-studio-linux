@@ -759,7 +759,7 @@ struct InMemoryConfigResolver final : Luau::ConfigResolver {
     Luau::Config config;
 };
 
-char* copy_string(const char* data, size_t size)
+char* copy_string(const char* data, size_t size) noexcept
 {
     char* result = static_cast<char*>(std::malloc(size + 1));
     if (!result)
@@ -769,9 +769,25 @@ char* copy_string(const char* data, size_t size)
     return result;
 }
 
-char* copy_string(const std::string& value)
+char* copy_string(const std::string& value) noexcept
 {
     return copy_string(value.data(), value.size());
+}
+
+char* copy_bounded_diagnostic(const char* message, size_t size) noexcept
+{
+    if (size <= kMaximumDiagnosticBytes)
+        return copy_string(message, size);
+
+    constexpr size_t marker_size = sizeof(kDiagnosticTruncatedMarker) - 1;
+    constexpr size_t prefix_size = kMaximumDiagnosticBytes - marker_size;
+    char* result = static_cast<char*>(std::malloc(kMaximumDiagnosticBytes + 1));
+    if (!result)
+        return nullptr;
+    std::memcpy(result, message, prefix_size);
+    std::memcpy(result + prefix_size, kDiagnosticTruncatedMarker, marker_size);
+    result[kMaximumDiagnosticBytes] = '\0';
+    return result;
 }
 
 std::string bounded_diagnostic(const char* message, size_t size)
@@ -1136,18 +1152,19 @@ void set_compile_internal_error(
     }
 }
 
-void set_run_error(StudioLuauRunResult* result, int32_t status, const char* message)
+void set_run_error(StudioLuauRunResult* result, int32_t status, const char* message) noexcept
 {
     result->status = status;
-    const std::string bounded = bounded_diagnostic(message, std::strlen(message));
-    result->message = copy_string(bounded);
+    std::free(result->message);
+    const char* safe_message = message ? message : "";
+    result->message = copy_bounded_diagnostic(safe_message, std::strlen(safe_message));
 }
 
-void set_run_error(StudioLuauRunResult* result, int32_t status, const std::string& message)
+void set_run_error(StudioLuauRunResult* result, int32_t status, const std::string& message) noexcept
 {
     result->status = status;
-    const std::string bounded = bounded_diagnostic(message.data(), message.size());
-    result->message = copy_string(bounded);
+    std::free(result->message);
+    result->message = copy_bounded_diagnostic(message.data(), message.size());
 }
 
 void* quota_allocator(void* userdata, void* pointer, size_t old_size, size_t new_size)
@@ -1673,25 +1690,6 @@ static int32_t studio_luau_run_internal(
         return -1;
     *result = {};
 
-    if (debug_enabled && (!control || !event_callback ||
-            breakpoint_count > kMaximumDebugBreakpoints ||
-            (!breakpoint_lines && breakpoint_count != 0))) {
-        set_run_error(result, kRunInternalError, "invalid native debugger configuration");
-        return -1;
-    }
-    if (!debug_enabled && breakpoint_count != 0) {
-        set_run_error(result, kRunInternalError, "breakpoints require debugger mode");
-        return -1;
-    }
-    for (size_t index = 0; index < breakpoint_count; ++index) {
-        if (breakpoint_lines[index] == 0 ||
-            breakpoint_lines[index] > static_cast<uint32_t>(std::numeric_limits<int>::max())) {
-            result->line = breakpoint_lines[index];
-            set_run_error(result, kRunInvalidBreakpoint, "breakpoint line is outside the supported range");
-            return -1;
-        }
-    }
-
     RunContext context;
     context.control = control;
     context.debug_enabled = debug_enabled;
@@ -1704,6 +1702,25 @@ static int32_t studio_luau_run_internal(
     ));
 
     try {
+        if (debug_enabled && (!control || !event_callback ||
+                breakpoint_count > kMaximumDebugBreakpoints ||
+                (!breakpoint_lines && breakpoint_count != 0))) {
+            set_run_error(result, kRunInternalError, "invalid native debugger configuration");
+            return -1;
+        }
+        if (!debug_enabled && breakpoint_count != 0) {
+            set_run_error(result, kRunInternalError, "breakpoints require debugger mode");
+            return -1;
+        }
+        for (size_t index = 0; index < breakpoint_count; ++index) {
+            if (breakpoint_lines[index] == 0 ||
+                breakpoint_lines[index] > static_cast<uint32_t>(std::numeric_limits<int>::max())) {
+                result->line = breakpoint_lines[index];
+                set_run_error(result, kRunInvalidBreakpoint, "breakpoint line is outside the supported range");
+                return -1;
+            }
+        }
+
         context.output.reserve(kMaximumCapturedOutput);
         LuaStateGuard guard{lua_newstate(quota_allocator, &context.memory)};
         if (!guard.state) {
