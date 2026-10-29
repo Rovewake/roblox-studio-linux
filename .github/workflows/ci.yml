@@ -35,6 +35,12 @@ jobs:
       - name: Check repository metadata and local documentation links
         run: python3 scripts/check_repo.py
 
+      - name: Fetch the version-pinned public Engine API dump
+        run: python3 scripts/fetch_studio_api_dump.py
+
+      - name: Verify generated Engine type declarations
+        run: python3 scripts/generate_studio_engine_types.py --check
+
       - name: Check Rust formatting
         run: cargo fmt --all -- --check
 

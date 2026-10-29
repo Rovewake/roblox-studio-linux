@@ -5,6 +5,7 @@
 //! language experiments and future tooling, not Roblox Studio playtesting.
 
 use std::{
+    collections::{HashMap, HashSet},
     ffi::{CStr, c_char},
     io,
     ptr::{self, NonNull},
@@ -25,6 +26,12 @@ const MIN_VM_MEMORY_BYTES: u64 = 1024 * 1024;
 const MAX_VM_MEMORY_BYTES: u64 = 256 * 1024 * 1024;
 const MAX_TIMEOUT: Duration = Duration::from_secs(60);
 const MAX_WORKERS: usize = 16;
+const MAX_ANALYSIS_NODES: usize = 100_000;
+const MAX_ANALYSIS_MODULES: usize = 512;
+const MAX_ANALYSIS_SOURCE_BYTES: usize = 16 * 1024 * 1024;
+const MAX_ANALYSIS_ID_BYTES: usize = 256;
+const MAX_ANALYSIS_NAME_BYTES: usize = 512;
+const MAX_COMPLETION_ITEMS: usize = 256;
 
 #[repr(C)]
 struct NativeDiagnostic {
@@ -34,6 +41,7 @@ struct NativeDiagnostic {
     end_line: u32,
     end_column: u32,
     message: *mut c_char,
+    module_id: *mut c_char,
 }
 
 #[repr(C)]
@@ -42,6 +50,43 @@ struct NativeCompileResult {
     bytecode_size: usize,
     diagnostics: *mut NativeDiagnostic,
     diagnostic_count: usize,
+}
+
+#[repr(C)]
+struct NativeAnalysisNode {
+    id: *const c_char,
+    id_size: usize,
+    parent_id: *const c_char,
+    parent_id_size: usize,
+    name: *const c_char,
+    name_size: usize,
+    source: *const c_char,
+    source_size: usize,
+    kind: i32,
+}
+
+#[repr(C)]
+struct NativeCompletionItem {
+    label: *mut c_char,
+    kind: i32,
+    insert_text: *mut c_char,
+}
+
+#[repr(C)]
+struct NativeCompletionResult {
+    items: *mut NativeCompletionItem,
+    item_count: usize,
+    context: i32,
+}
+
+#[repr(C)]
+#[derive(Default)]
+struct NativeDefinitionResult {
+    found: i32,
+    start_line: u32,
+    start_column: u32,
+    end_line: u32,
+    end_column: u32,
 }
 
 #[repr(C)]
@@ -70,6 +115,34 @@ unsafe extern "C" {
         source: *const c_char,
         source_size: usize,
         result: *mut NativeCompileResult,
+    ) -> i32;
+    fn studio_luau_analyze_project(
+        project_root_id: *const c_char,
+        project_root_id_size: usize,
+        entry_script_id: *const c_char,
+        entry_script_id_size: usize,
+        nodes: *const NativeAnalysisNode,
+        node_count: usize,
+        result: *mut NativeCompileResult,
+    ) -> i32;
+    fn studio_luau_complete_project(
+        project_root_id: *const c_char,
+        project_root_id_size: usize,
+        entry_script_id: *const c_char,
+        entry_script_id_size: usize,
+        nodes: *const NativeAnalysisNode,
+        node_count: usize,
+        zero_based_line: u32,
+        zero_based_column: u32,
+        result: *mut NativeCompletionResult,
+    ) -> i32;
+    fn studio_luau_completion_result_free(result: *mut NativeCompletionResult);
+    fn studio_luau_find_local_definition(
+        source: *const c_char,
+        source_size: usize,
+        zero_based_line: u32,
+        zero_based_column: u32,
+        result: *mut NativeDefinitionResult,
     ) -> i32;
 
     fn studio_luau_control_new() -> *mut NativeControl;
@@ -115,6 +188,167 @@ impl ScriptDocument {
     }
 }
 
+/// Node kind in a project snapshot supplied to the Luau Frontend.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectNodeKind {
+    /// A non-script Instance that can appear between a script and a child.
+    Container,
+    /// A module that may be loaded by `require`.
+    ModuleScript,
+    /// A server Script used as the analysis entry point.
+    Script,
+    /// A LocalScript used as the analysis entry point.
+    LocalScript,
+}
+
+impl ProjectNodeKind {
+    fn native_value(self) -> i32 {
+        match self {
+            Self::Container => 0,
+            Self::ModuleScript => 1,
+            Self::Script => 2,
+            Self::LocalScript => 3,
+        }
+    }
+
+    fn has_source(self) -> bool {
+        !matches!(self, Self::Container)
+    }
+}
+
+/// One project hierarchy node for static module resolution.
+///
+/// IDs are opaque to Luau and only need to be unique within this snapshot.
+/// They are usually produced from the open project's instance identities.
+/// The snapshot includes containers so static paths can walk ancestors and
+/// children. A source is required for scripts and forbidden for containers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProjectNode {
+    /// Opaque, project-local identity. Do not use a machine-specific path.
+    pub id: String,
+    /// Exact Instance name used for static child-path matching.
+    pub name: String,
+    /// Parent node ID; only the project root has no parent.
+    pub parent_id: Option<String>,
+    /// Whether this node is a ModuleScript, Script, LocalScript, or container.
+    pub kind: ProjectNodeKind,
+    /// Exact source for a script node; absent for containers.
+    pub source: Option<ScriptDocument>,
+}
+
+impl ProjectNode {
+    /// Create a non-script hierarchy node.
+    pub fn container(
+        id: impl Into<String>,
+        name: impl Into<String>,
+        parent_id: Option<String>,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            name: name.into(),
+            parent_id,
+            kind: ProjectNodeKind::Container,
+            source: None,
+        }
+    }
+
+    /// Create a ModuleScript node that can be a `require` target.
+    pub fn module_script(
+        id: impl Into<String>,
+        name: impl Into<String>,
+        parent_id: impl Into<String>,
+        source: impl Into<String>,
+    ) -> Self {
+        Self::with_source(id, name, parent_id, ProjectNodeKind::ModuleScript, source)
+    }
+
+    /// Create a server Script node for use as an analysis entry point.
+    pub fn script(
+        id: impl Into<String>,
+        name: impl Into<String>,
+        parent_id: impl Into<String>,
+        source: impl Into<String>,
+    ) -> Self {
+        Self::with_source(id, name, parent_id, ProjectNodeKind::Script, source)
+    }
+
+    /// Create a LocalScript node for use as an analysis entry point.
+    pub fn local_script(
+        id: impl Into<String>,
+        name: impl Into<String>,
+        parent_id: impl Into<String>,
+        source: impl Into<String>,
+    ) -> Self {
+        Self::with_source(id, name, parent_id, ProjectNodeKind::LocalScript, source)
+    }
+
+    fn with_source(
+        id: impl Into<String>,
+        name: impl Into<String>,
+        parent_id: impl Into<String>,
+        kind: ProjectNodeKind,
+        source: impl Into<String>,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            name: name.into(),
+            parent_id: Some(parent_id.into()),
+            kind,
+            source: Some(ScriptDocument::new(source)),
+        }
+    }
+}
+
+/// Zero-based line and UTF-8 byte column for editor features.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SourcePosition {
+    pub line: u32,
+    pub column: u32,
+}
+
+/// Completion category returned by the pinned Luau autocomplete API.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompletionKind {
+    Property,
+    Binding,
+    Keyword,
+    String,
+    Type,
+    Module,
+    GeneratedFunction,
+    RequirePath,
+    HotComment,
+    Unknown,
+}
+
+/// Syntactic context in which Luau requested completions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompletionContext {
+    Unknown,
+    Expression,
+    Statement,
+    Property,
+    Type,
+    Keyword,
+    String,
+    HotComment,
+}
+
+/// One non-mutating editor suggestion from Luau's Frontend.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CompletionItem {
+    pub label: String,
+    pub kind: CompletionKind,
+    pub insert_text: Option<String>,
+}
+
+/// Completion suggestions and the source context returned by Luau.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CompletionList {
+    pub context: CompletionContext,
+    pub items: Vec<CompletionItem>,
+}
+
 /// Luau compiler or runtime diagnostic category.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DiagnosticKind {
@@ -134,6 +368,8 @@ pub enum DiagnosticKind {
     LintWarning,
     /// The official Frontend exceeded its cooperative per-module time limit.
     AnalysisTimeout,
+    /// Project module resolution exceeded its bounded amount of tree work.
+    AnalysisLimit,
 }
 
 /// A source span with one-based lines and UTF-8 byte columns.
@@ -151,6 +387,8 @@ pub struct SourceRange {
 /// One Luau diagnostic with source location where available.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Diagnostic {
+    /// Project node ID when the Frontend can attribute a project diagnostic.
+    pub module_id: Option<String>,
     pub kind: DiagnosticKind,
     pub range: SourceRange,
     pub message: String,
@@ -189,6 +427,18 @@ pub enum AnalysisFailure {
     /// Source exceeded the implementation's bounded input size.
     #[error("script source exceeds the {limit}-byte limit ({actual} bytes)")]
     SourceTooLarge { actual: usize, limit: usize },
+    /// The supplied project snapshot was malformed or exceeded its graph limits.
+    #[error("project analysis input is invalid: {0}")]
+    InvalidProject(String),
+    /// The project contains more nodes than the bounded analyzer accepts.
+    #[error("project contains {actual} analysis nodes; the limit is {limit}")]
+    TooManyProjectNodes { actual: usize, limit: usize },
+    /// Combined script source exceeds the project analysis limit.
+    #[error("project script sources total {actual} bytes; the limit is {limit}")]
+    ProjectSourcesTooLarge { actual: usize, limit: usize },
+    /// Cursor points outside the entry script or inside a UTF-8 code point.
+    #[error("completion cursor is not a valid UTF-8 source position: line {line}, column {column}")]
+    InvalidCursorPosition { line: u32, column: u32 },
     /// The native Luau Frontend failed unexpectedly.
     #[error("Luau analyzer failed: {0}")]
     Internal(String),
@@ -314,6 +564,430 @@ pub fn analyze(document: &ScriptDocument) -> Result<Vec<Diagnostic>, AnalysisFai
             .collect::<Vec<_>>()
             .join("; "),
     ))
+}
+
+/// Type-check and lint one entry script and its statically resolved modules.
+///
+/// This consumes an immutable project hierarchy snapshot. It resolves only
+/// unique, local `ModuleScript` targets reached through static paths; dynamic
+/// expressions, ambiguous child names, and remote asset IDs remain unresolved.
+/// The resolver follows the documented Luau paths `script.Parent.Child`,
+/// constant-string child lookup, `GetService("...")`, and string paths with
+/// `./`, `../`, `@self/`, or `@game/` prefixes. These rules do not implement a
+/// runtime DataModel or any Roblox Engine behavior. Resolver tree work is
+/// bounded; exhaustion is returned as an `AnalysisLimit` diagnostic. The
+/// selected entry remains available as the Frontend root, but a non-ModuleScript
+/// entry cannot be loaded as a `require` dependency. The caller must capture the
+/// project consistently and run this blocking analysis off the UI thread.
+pub fn analyze_project(
+    project_root_id: &str,
+    entry_script_id: &str,
+    nodes: &[ProjectNode],
+) -> Result<Vec<Diagnostic>, AnalysisFailure> {
+    validate_project_snapshot(project_root_id, entry_script_id, nodes)?;
+
+    let mut native_nodes = Vec::with_capacity(nodes.len());
+    for node in nodes {
+        let parent_id = node.parent_id.as_deref();
+        let source = node
+            .source
+            .as_ref()
+            .map(ScriptDocument::source)
+            .unwrap_or("");
+        native_nodes.push(NativeAnalysisNode {
+            id: node.id.as_ptr().cast::<c_char>(),
+            id_size: node.id.len(),
+            parent_id: parent_id.map_or(ptr::null(), |value| value.as_ptr().cast::<c_char>()),
+            parent_id_size: parent_id.map_or(0, str::len),
+            name: node.name.as_ptr().cast::<c_char>(),
+            name_size: node.name.len(),
+            source: source.as_ptr().cast::<c_char>(),
+            source_size: source.len(),
+            kind: node.kind.native_value(),
+        });
+    }
+
+    let mut native_result = NativeCompileResult {
+        bytecode: ptr::null_mut(),
+        bytecode_size: 0,
+        diagnostics: ptr::null_mut(),
+        diagnostic_count: 0,
+    };
+    // SAFETY: all strings and the node array remain alive until the bridge
+    // returns; `native_result` is released by its matching free function.
+    let status = unsafe {
+        studio_luau_analyze_project(
+            project_root_id.as_ptr().cast::<c_char>(),
+            project_root_id.len(),
+            entry_script_id.as_ptr().cast::<c_char>(),
+            entry_script_id.len(),
+            native_nodes.as_ptr(),
+            native_nodes.len(),
+            &mut native_result,
+        )
+    };
+    let guard = CompileResultGuard(&mut native_result);
+    let diagnostics = native_diagnostics(&native_result);
+    drop(guard);
+
+    if status == 0 {
+        return Ok(diagnostics);
+    }
+    if diagnostics.is_empty() {
+        return Err(AnalysisFailure::Internal(format!(
+            "native project analyzer returned status {status} without diagnostics"
+        )));
+    }
+    Err(AnalysisFailure::Internal(
+        diagnostics
+            .into_iter()
+            .map(|diagnostic| diagnostic.message)
+            .collect::<Vec<_>>()
+            .join("; "),
+    ))
+}
+
+/// Request editor completions from the official Luau Frontend and pinned
+/// partial Engine type surface. This returns suggestions only; it never changes
+/// the script source. Run it off the UI thread because project checking is
+/// synchronous and has a cooperative deadline.
+pub fn complete_project(
+    project_root_id: &str,
+    entry_script_id: &str,
+    nodes: &[ProjectNode],
+    position: SourcePosition,
+) -> Result<CompletionList, AnalysisFailure> {
+    validate_project_snapshot(project_root_id, entry_script_id, nodes)?;
+    let Some(entry) = nodes.iter().find(|node| node.id == entry_script_id) else {
+        return Err(AnalysisFailure::InvalidProject(
+            "entry script disappeared after project validation".to_owned(),
+        ));
+    };
+    let Some(document) = entry.source.as_ref() else {
+        return Err(AnalysisFailure::InvalidProject(
+            "entry script has no source after project validation".to_owned(),
+        ));
+    };
+    let source = document.source();
+    validate_cursor_position(source, position)?;
+
+    let mut native_nodes = Vec::with_capacity(nodes.len());
+    for node in nodes {
+        let parent_id = node.parent_id.as_deref();
+        let source = node
+            .source
+            .as_ref()
+            .map(ScriptDocument::source)
+            .unwrap_or("");
+        native_nodes.push(NativeAnalysisNode {
+            id: node.id.as_ptr().cast::<c_char>(),
+            id_size: node.id.len(),
+            parent_id: parent_id.map_or(ptr::null(), |value| value.as_ptr().cast::<c_char>()),
+            parent_id_size: parent_id.map_or(0, str::len),
+            name: node.name.as_ptr().cast::<c_char>(),
+            name_size: node.name.len(),
+            source: source.as_ptr().cast::<c_char>(),
+            source_size: source.len(),
+            kind: node.kind.native_value(),
+        });
+    }
+
+    let mut native_result = NativeCompletionResult {
+        items: ptr::null_mut(),
+        item_count: 0,
+        context: 0,
+    };
+    // SAFETY: the validated node strings and native node array outlive the call;
+    // the matching native free function releases every returned allocation.
+    let status = unsafe {
+        studio_luau_complete_project(
+            project_root_id.as_ptr().cast::<c_char>(),
+            project_root_id.len(),
+            entry_script_id.as_ptr().cast::<c_char>(),
+            entry_script_id.len(),
+            native_nodes.as_ptr(),
+            native_nodes.len(),
+            position.line,
+            position.column,
+            &mut native_result,
+        )
+    };
+    let guard = CompletionResultGuard(&mut native_result);
+    if status != 0 {
+        drop(guard);
+        let reason = match status {
+            -2 => "Luau autocomplete exceeded its cooperative 15-second deadline".to_owned(),
+            -3 => "project module resolution exceeded its bounded node-visit budget".to_owned(),
+            _ => format!("native Luau autocomplete returned status {status}"),
+        };
+        return Err(AnalysisFailure::Internal(reason));
+    }
+    if native_result.item_count > MAX_COMPLETION_ITEMS
+        || (native_result.item_count != 0 && native_result.items.is_null())
+    {
+        drop(guard);
+        return Err(AnalysisFailure::Internal(
+            "native autocomplete returned an invalid completion list".to_owned(),
+        ));
+    }
+
+    let context = completion_context(native_result.context);
+    // SAFETY: the result came from the bridge and passed pointer/count checks;
+    // the result guard remains active until all strings are copied.
+    let entries = if native_result.item_count == 0 {
+        &[][..]
+    } else {
+        unsafe { slice::from_raw_parts(native_result.items, native_result.item_count) }
+    };
+    let items = entries
+        .iter()
+        .map(|item| CompletionItem {
+            label: native_message(item.label),
+            kind: completion_kind(item.kind),
+            insert_text: native_optional_message(item.insert_text),
+        })
+        .collect();
+    drop(guard);
+
+    Ok(CompletionList { context, items })
+}
+
+/// Find the declaration of a local variable or parameter at this source
+/// position. Globals, properties, and module navigation are outside this local
+/// symbol contract. The returned range uses one-based lines and UTF-8 byte
+/// columns, like diagnostics. The API parses the source synchronously; call it
+/// on a background worker for large documents.
+pub fn find_local_definition(
+    document: &ScriptDocument,
+    position: SourcePosition,
+) -> Result<Option<SourceRange>, AnalysisFailure> {
+    let source = document.source().as_bytes();
+    if source.len() > MAX_SOURCE_BYTES {
+        return Err(AnalysisFailure::SourceTooLarge {
+            actual: source.len(),
+            limit: MAX_SOURCE_BYTES,
+        });
+    }
+    validate_cursor_position(document.source(), position)?;
+
+    let mut native_result = NativeDefinitionResult::default();
+    // SAFETY: the immutable UTF-8 source remains alive for the call and the
+    // initialized result pointer refers to a writable C-layout value.
+    let status = unsafe {
+        studio_luau_find_local_definition(
+            source.as_ptr().cast::<c_char>(),
+            source.len(),
+            position.line,
+            position.column,
+            &mut native_result,
+        )
+    };
+    if status != 0 {
+        return Err(AnalysisFailure::Internal(format!(
+            "native local definition lookup returned status {status}"
+        )));
+    }
+    if native_result.found == 0 {
+        return Ok(None);
+    }
+
+    Ok(Some(SourceRange {
+        start_line: native_result.start_line,
+        start_column: native_result.start_column,
+        end_line: native_result.end_line,
+        end_column: native_result.end_column,
+    }))
+}
+
+fn validate_cursor_position(source: &str, position: SourcePosition) -> Result<(), AnalysisFailure> {
+    let valid = source
+        .split('\n')
+        .nth(position.line as usize)
+        .is_some_and(|line| {
+            let column = position.column as usize;
+            column <= line.len() && line.is_char_boundary(column)
+        });
+    if valid {
+        Ok(())
+    } else {
+        Err(AnalysisFailure::InvalidCursorPosition {
+            line: position.line,
+            column: position.column,
+        })
+    }
+}
+
+fn validate_project_snapshot(
+    project_root_id: &str,
+    entry_script_id: &str,
+    nodes: &[ProjectNode],
+) -> Result<(), AnalysisFailure> {
+    if nodes.is_empty() {
+        return Err(AnalysisFailure::InvalidProject(
+            "the project snapshot contains no nodes".to_owned(),
+        ));
+    }
+    if nodes.len() > MAX_ANALYSIS_NODES {
+        return Err(AnalysisFailure::TooManyProjectNodes {
+            actual: nodes.len(),
+            limit: MAX_ANALYSIS_NODES,
+        });
+    }
+    validate_project_id(project_root_id, "project root")?;
+    validate_project_id(entry_script_id, "entry script")?;
+
+    let mut by_id = HashMap::with_capacity(nodes.len());
+    let mut children: HashMap<&str, Vec<&str>> = HashMap::new();
+    let mut source_bytes = 0usize;
+    let mut module_count = 0usize;
+    let mut root_count = 0usize;
+
+    for node in nodes {
+        validate_project_id(&node.id, "node")?;
+        if node.name.len() > MAX_ANALYSIS_NAME_BYTES || node.name.contains('\0') {
+            return Err(AnalysisFailure::InvalidProject(format!(
+                "node {:?} has an invalid or oversized name",
+                node.id
+            )));
+        }
+        if by_id.insert(node.id.as_str(), node).is_some() {
+            return Err(AnalysisFailure::InvalidProject(format!(
+                "duplicate node ID {:?}",
+                node.id
+            )));
+        }
+        match (node.kind.has_source(), node.source.as_ref()) {
+            (true, Some(document)) => {
+                let bytes = document.source.len();
+                if bytes > MAX_SOURCE_BYTES {
+                    return Err(AnalysisFailure::SourceTooLarge {
+                        actual: bytes,
+                        limit: MAX_SOURCE_BYTES,
+                    });
+                }
+                source_bytes = source_bytes.checked_add(bytes).ok_or({
+                    AnalysisFailure::ProjectSourcesTooLarge {
+                        actual: usize::MAX,
+                        limit: MAX_ANALYSIS_SOURCE_BYTES,
+                    }
+                })?;
+                if node.kind == ProjectNodeKind::ModuleScript {
+                    module_count += 1;
+                }
+            }
+            (true, None) => {
+                return Err(AnalysisFailure::InvalidProject(format!(
+                    "script node {:?} has no source",
+                    node.id
+                )));
+            }
+            (false, Some(_)) => {
+                return Err(AnalysisFailure::InvalidProject(format!(
+                    "container node {:?} must not have source",
+                    node.id
+                )));
+            }
+            (false, None) => {}
+        }
+        if source_bytes > MAX_ANALYSIS_SOURCE_BYTES {
+            return Err(AnalysisFailure::ProjectSourcesTooLarge {
+                actual: source_bytes,
+                limit: MAX_ANALYSIS_SOURCE_BYTES,
+            });
+        }
+
+        match node.parent_id.as_deref() {
+            None => {
+                root_count += 1;
+                if node.id != project_root_id || node.kind != ProjectNodeKind::Container {
+                    return Err(AnalysisFailure::InvalidProject(format!(
+                        "only the declared project root may have no parent, and it must be a container (found {:?})",
+                        node.id
+                    )));
+                }
+            }
+            Some(parent_id) => {
+                validate_project_id(parent_id, "parent")?;
+                children
+                    .entry(parent_id)
+                    .or_default()
+                    .push(node.id.as_str());
+            }
+        }
+    }
+
+    if root_count != 1 {
+        return Err(AnalysisFailure::InvalidProject(format!(
+            "expected one root node, found {root_count}"
+        )));
+    }
+    if module_count > MAX_ANALYSIS_MODULES {
+        return Err(AnalysisFailure::InvalidProject(format!(
+            "project contains {module_count} ModuleScripts; the limit is {MAX_ANALYSIS_MODULES}"
+        )));
+    }
+    for node in nodes {
+        if let Some(parent_id) = node.parent_id.as_deref()
+            && !by_id.contains_key(parent_id)
+        {
+            return Err(AnalysisFailure::InvalidProject(format!(
+                "node {:?} refers to missing parent {:?}",
+                node.id, parent_id
+            )));
+        }
+    }
+
+    let root = by_id.get(project_root_id).ok_or_else(|| {
+        AnalysisFailure::InvalidProject(format!(
+            "project root ID {:?} is not present",
+            project_root_id
+        ))
+    })?;
+    if root.parent_id.is_some() || root.kind != ProjectNodeKind::Container {
+        return Err(AnalysisFailure::InvalidProject(
+            "declared project root must be a parentless container".to_owned(),
+        ));
+    }
+    let entry = by_id.get(entry_script_id).ok_or_else(|| {
+        AnalysisFailure::InvalidProject(format!(
+            "entry script ID {:?} is not present",
+            entry_script_id
+        ))
+    })?;
+    if !entry.kind.has_source() || entry.source.is_none() {
+        return Err(AnalysisFailure::InvalidProject(
+            "entry node must be a Script, LocalScript, or ModuleScript with source".to_owned(),
+        ));
+    }
+
+    let mut reachable = HashSet::with_capacity(nodes.len());
+    let mut pending = vec![project_root_id];
+    while let Some(id) = pending.pop() {
+        if !reachable.insert(id) {
+            return Err(AnalysisFailure::InvalidProject(
+                "project hierarchy contains a cycle".to_owned(),
+            ));
+        }
+        if let Some(children) = children.get(id) {
+            pending.extend(children.iter().copied());
+        }
+    }
+    if reachable.len() != nodes.len() {
+        return Err(AnalysisFailure::InvalidProject(
+            "every node must belong to the declared project tree".to_owned(),
+        ));
+    }
+
+    Ok(())
+}
+
+fn validate_project_id(id: &str, field: &str) -> Result<(), AnalysisFailure> {
+    if id.is_empty() || id.len() > MAX_ANALYSIS_ID_BYTES || id.contains('\0') {
+        return Err(AnalysisFailure::InvalidProject(format!(
+            "{field} ID must be nonempty, NUL-free, and at most {MAX_ANALYSIS_ID_BYTES} bytes"
+        )));
+    }
+    Ok(())
 }
 
 /// Limits for script execution on an isolated native worker thread.
@@ -595,6 +1269,16 @@ impl Drop for CompileResultGuard {
     }
 }
 
+struct CompletionResultGuard(*mut NativeCompletionResult);
+
+impl Drop for CompletionResultGuard {
+    fn drop(&mut self) {
+        // SAFETY: the bridge accepts its own initialized completion result and
+        // frees every label and optional insertion string returned by Luau.
+        unsafe { studio_luau_completion_result_free(self.0) };
+    }
+}
+
 struct RunResultGuard(*mut NativeRunResult);
 
 impl Drop for RunResultGuard {
@@ -705,6 +1389,7 @@ fn native_diagnostics(result: &NativeCompileResult) -> Vec<Diagnostic> {
     entries
         .iter()
         .map(|entry| Diagnostic {
+            module_id: native_optional_message(entry.module_id),
             kind: diagnostic_kind(entry.kind),
             range: SourceRange {
                 start_line: entry.start_line,
@@ -726,7 +1411,36 @@ fn diagnostic_kind(kind: i32) -> DiagnosticKind {
         6 => DiagnosticKind::LintError,
         7 => DiagnosticKind::LintWarning,
         8 => DiagnosticKind::AnalysisTimeout,
+        9 => DiagnosticKind::AnalysisLimit,
         _ => DiagnosticKind::Internal,
+    }
+}
+
+fn completion_context(context: i32) -> CompletionContext {
+    match context {
+        1 => CompletionContext::Expression,
+        2 => CompletionContext::Statement,
+        3 => CompletionContext::Property,
+        4 => CompletionContext::Type,
+        5 => CompletionContext::Keyword,
+        6 => CompletionContext::String,
+        7 => CompletionContext::HotComment,
+        _ => CompletionContext::Unknown,
+    }
+}
+
+fn completion_kind(kind: i32) -> CompletionKind {
+    match kind {
+        1 => CompletionKind::Property,
+        2 => CompletionKind::Binding,
+        3 => CompletionKind::Keyword,
+        4 => CompletionKind::String,
+        5 => CompletionKind::Type,
+        6 => CompletionKind::Module,
+        7 => CompletionKind::GeneratedFunction,
+        8 => CompletionKind::RequirePath,
+        9 => CompletionKind::HotComment,
+        _ => CompletionKind::Unknown,
     }
 }
 
@@ -740,8 +1454,16 @@ fn native_message(message: *const c_char) -> String {
         .into_owned()
 }
 
+fn native_optional_message(message: *const c_char) -> Option<String> {
+    if message.is_null() {
+        return None;
+    }
+    Some(native_message(message))
+}
+
 fn runtime_diagnostic(line: u32, message: String) -> Diagnostic {
     Diagnostic {
+        module_id: None,
         kind: DiagnosticKind::Runtime,
         range: SourceRange {
             start_line: line,
@@ -763,6 +1485,29 @@ fn internal_result(message: &str) -> ExecutionResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn project_nodes() -> Vec<ProjectNode> {
+        vec![
+            ProjectNode::container("DataModel", "game", None),
+            ProjectNode::container(
+                "ReplicatedStorage",
+                "ReplicatedStorage",
+                Some("DataModel".to_owned()),
+            ),
+            ProjectNode::module_script(
+                "SharedModule",
+                "Shared",
+                "ReplicatedStorage",
+                "return { answer = 42 }\n",
+            ),
+            ProjectNode::script(
+                "MainScript",
+                "Main",
+                "ReplicatedStorage",
+                "local shared = require(script.Parent.Shared)\nprint(shared.answer)\n",
+            ),
+        ]
+    }
 
     fn run(source: &str) -> ExecutionResult {
         ExecutionService::default()
@@ -816,6 +1561,423 @@ mod tests {
         assert!(engine_reference.iter().any(|diagnostic| {
             diagnostic.kind == DiagnosticKind::Type && diagnostic.message.contains("game")
         }));
+    }
+
+    #[test]
+    fn project_snapshot_rejects_duplicate_ids_before_native_analysis() {
+        let mut nodes = project_nodes();
+        nodes.push(ProjectNode::container(
+            "MainScript",
+            "Duplicate",
+            Some("ReplicatedStorage".to_owned()),
+        ));
+        let error = validate_project_snapshot("DataModel", "MainScript", &nodes)
+            .expect_err("duplicate project IDs must not cross the FFI boundary");
+        assert!(
+            matches!(error, AnalysisFailure::InvalidProject(message) if message.contains("duplicate node ID"))
+        );
+    }
+
+    #[test]
+    fn project_snapshot_rejects_disconnected_hierarchies_before_native_analysis() {
+        let mut nodes = project_nodes();
+        nodes.push(ProjectNode::container("Detached", "Detached", None));
+        let error = validate_project_snapshot("DataModel", "MainScript", &nodes)
+            .expect_err("disconnected project nodes must be rejected");
+        assert!(
+            matches!(error, AnalysisFailure::InvalidProject(message) if message.contains("only the declared project root"))
+        );
+    }
+
+    #[test]
+    fn project_snapshot_bounds_combined_source_before_native_analysis() {
+        let mut nodes = project_nodes();
+        let large_source = " ".repeat(MAX_SOURCE_BYTES);
+        nodes[2].source = Some(ScriptDocument::new(large_source.clone()));
+        nodes[3].source = Some(ScriptDocument::new(large_source.clone()));
+        for index in 0..7 {
+            nodes.push(ProjectNode::module_script(
+                format!("LargeModule{index}"),
+                format!("Large{index}"),
+                "ReplicatedStorage",
+                large_source.clone(),
+            ));
+        }
+        let error = validate_project_snapshot("DataModel", "MainScript", &nodes)
+            .expect_err("combined project source must stay below its limit");
+        assert!(matches!(
+            error,
+            AnalysisFailure::ProjectSourcesTooLarge { .. }
+        ));
+    }
+
+    #[test]
+    fn project_analysis_resolves_static_instance_paths_and_keeps_module_identity() {
+        let mut nodes = project_nodes();
+        nodes[2].source = Some(ScriptDocument::new("local = false\n"));
+        let diagnostics = analyze_project("DataModel", "MainScript", &nodes)
+            .expect("valid project snapshots should be analyzed");
+
+        assert!(
+            diagnostics.iter().any(|diagnostic| {
+                diagnostic.kind == DiagnosticKind::Syntax
+                    && diagnostic.module_id.as_deref() == Some("SharedModule")
+            }),
+            "diagnostics: {diagnostics:#?}"
+        );
+    }
+
+    #[test]
+    fn project_analysis_resolves_documented_static_require_string_paths() {
+        for require_path in ["./Shared", "@game/ReplicatedStorage/Shared"] {
+            let mut nodes = project_nodes();
+            nodes[2].source = Some(ScriptDocument::new("local = false\n"));
+            nodes[3].source = Some(ScriptDocument::new(format!("require({require_path:?})\n")));
+
+            let diagnostics = analyze_project("DataModel", "MainScript", &nodes)
+                .expect("valid project snapshots should be analyzed");
+
+            assert!(
+                diagnostics.iter().any(|diagnostic| {
+                    diagnostic.kind == DiagnosticKind::Syntax
+                        && diagnostic.module_id.as_deref() == Some("SharedModule")
+                }),
+                "require path {require_path:?} should resolve the ModuleScript"
+            );
+        }
+
+        let mut self_path_nodes = project_nodes();
+        self_path_nodes[2].source = Some(ScriptDocument::new("local = false\n"));
+        self_path_nodes[3].source = Some(ScriptDocument::new("require(\"@self/Private\")\n"));
+        self_path_nodes.push(ProjectNode::module_script(
+            "PrivateModule",
+            "Private",
+            "MainScript",
+            "local = false\n",
+        ));
+        let diagnostics = analyze_project("DataModel", "MainScript", &self_path_nodes)
+            .expect("@self paths should be analyzed");
+        assert!(
+            diagnostics.iter().any(|diagnostic| {
+                diagnostic.kind == DiagnosticKind::Syntax
+                    && diagnostic.module_id.as_deref() == Some("PrivateModule")
+            }),
+            "@self path should resolve relative to the entry script"
+        );
+
+        let mut parent_path_nodes = project_nodes();
+        parent_path_nodes[2].source = Some(ScriptDocument::new("local = false\n"));
+        parent_path_nodes[3].source = Some(ScriptDocument::new("require(\"../RootSibling\")\n"));
+        parent_path_nodes.push(ProjectNode::module_script(
+            "RootSibling",
+            "RootSibling",
+            "DataModel",
+            "local = false\n",
+        ));
+        let diagnostics = analyze_project("DataModel", "MainScript", &parent_path_nodes)
+            .expect("parent paths should be analyzed");
+        assert!(
+            diagnostics.iter().any(|diagnostic| {
+                diagnostic.kind == DiagnosticKind::Syntax
+                    && diagnostic.module_id.as_deref() == Some("RootSibling")
+            }),
+            "../ path should resolve from script.Parent.Parent"
+        );
+    }
+
+    #[test]
+    fn project_analysis_resolves_static_child_lookup_methods() {
+        for require_expression in [
+            "script.Parent:WaitForChild(\"Shared\")",
+            "script.Parent:FindFirstChild(\"Shared\")",
+        ] {
+            let mut nodes = project_nodes();
+            nodes[2].source = Some(ScriptDocument::new("local = false\n"));
+            nodes[3].source = Some(ScriptDocument::new(format!(
+                "require({require_expression})\n"
+            )));
+            let diagnostics = analyze_project("DataModel", "MainScript", &nodes)
+                .expect("static child lookups should be analyzed");
+
+            assert!(
+                diagnostics.iter().any(|diagnostic| {
+                    diagnostic.kind == DiagnosticKind::Syntax
+                        && diagnostic.module_id.as_deref() == Some("SharedModule")
+                }),
+                "lookup expression {require_expression:?} should resolve the ModuleScript"
+            );
+        }
+
+        let mut recursive_nodes = project_nodes();
+        recursive_nodes[2].source = Some(ScriptDocument::new("local = false\n"));
+        recursive_nodes[3].source = Some(ScriptDocument::new(
+            "require(script.Parent:FindFirstChild(\"Deep\", true))\n",
+        ));
+        recursive_nodes.push(ProjectNode::container(
+            "NestedFolder",
+            "Nested",
+            Some("ReplicatedStorage".to_owned()),
+        ));
+        recursive_nodes.push(ProjectNode::module_script(
+            "DeepModule",
+            "Deep",
+            "NestedFolder",
+            "local = false\n",
+        ));
+        let diagnostics = analyze_project("DataModel", "MainScript", &recursive_nodes)
+            .expect("recursive static child lookup should be analyzed");
+        assert!(
+            diagnostics.iter().any(|diagnostic| {
+                diagnostic.kind == DiagnosticKind::Syntax
+                    && diagnostic.module_id.as_deref() == Some("DeepModule")
+            }),
+            "recursive FindFirstChild should resolve nested ModuleScripts"
+        );
+    }
+
+    #[test]
+    fn project_analysis_reports_when_static_resolution_reaches_its_work_limit() {
+        let mut nodes = project_nodes();
+        nodes[2].source = Some(ScriptDocument::new("return true\n"));
+        nodes[3].source = Some(ScriptDocument::new(
+            "require(script.Parent:FindFirstChild(\"Target\", true))\n".repeat(300),
+        ));
+        nodes.push(ProjectNode::module_script(
+            "TargetModule",
+            "Target",
+            "ReplicatedStorage",
+            "return true\n",
+        ));
+        for index in 0..1_000 {
+            nodes.push(ProjectNode::container(
+                format!("Container{index}"),
+                format!("Container{index}"),
+                Some("ReplicatedStorage".to_owned()),
+            ));
+        }
+
+        let diagnostics = analyze_project("DataModel", "MainScript", &nodes)
+            .expect("bounded resolver exhaustion should be a diagnostic");
+
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.kind == DiagnosticKind::AnalysisLimit),
+            "diagnostics: {diagnostics:#?}"
+        );
+    }
+
+    #[test]
+    fn project_analysis_does_not_guess_ambiguous_module_names() {
+        let mut nodes = project_nodes();
+        nodes[2].source = Some(ScriptDocument::new("local = false\n"));
+        nodes[3].source = Some(ScriptDocument::new("require(script.Parent.Shared)\n"));
+        nodes.push(ProjectNode::module_script(
+            "DuplicateSharedModule",
+            "Shared",
+            "ReplicatedStorage",
+            "local = also_false\n",
+        ));
+
+        let diagnostics = analyze_project("DataModel", "MainScript", &nodes)
+            .expect("ambiguous paths should remain unresolved without failing analysis");
+
+        assert!(
+            diagnostics.iter().all(|diagnostic| {
+                !matches!(
+                    diagnostic.module_id.as_deref(),
+                    Some("SharedModule" | "DuplicateSharedModule")
+                )
+            }),
+            "ambiguous paths must not load either matching module: {diagnostics:#?}"
+        );
+    }
+
+    #[test]
+    fn project_analysis_does_not_resolve_non_module_targets() {
+        let mut nodes = project_nodes();
+        nodes[2].source = Some(ScriptDocument::new("local = false\n"));
+        nodes[3].source = Some(ScriptDocument::new("require(script.Parent.OtherScript)\n"));
+        nodes.push(ProjectNode::script(
+            "OtherScript",
+            "OtherScript",
+            "ReplicatedStorage",
+            "local = also_false\n",
+        ));
+
+        let diagnostics = analyze_project("DataModel", "MainScript", &nodes)
+            .expect("non-ModuleScript targets should remain unresolved");
+
+        assert!(
+            diagnostics.iter().all(|diagnostic| {
+                !matches!(
+                    diagnostic.module_id.as_deref(),
+                    Some("SharedModule" | "OtherScript")
+                )
+            }),
+            "require must not load a normal Script as a ModuleScript: {diagnostics:#?}"
+        );
+    }
+
+    #[test]
+    fn project_analysis_does_not_require_the_non_module_entry_script() {
+        let mut nodes = project_nodes();
+        nodes[3].source = Some(ScriptDocument::new("--!strict\nrequire(script)\n"));
+
+        let diagnostics = analyze_project("DataModel", "MainScript", &nodes)
+            .expect("the root script should still be analyzed");
+
+        assert!(
+            diagnostics.iter().any(|diagnostic| {
+                diagnostic.kind == DiagnosticKind::Type
+                    && diagnostic.module_id.as_deref() == Some("MainScript")
+            }),
+            "a normal Script entry must not become a ModuleScript dependency: {diagnostics:#?}"
+        );
+    }
+
+    #[test]
+    fn project_analysis_leaves_dynamic_and_asset_id_requires_unresolved() {
+        for require_expression in ["loadModule()", "123456"] {
+            let mut nodes = project_nodes();
+            nodes[2].source = Some(ScriptDocument::new("local = false\n"));
+            nodes[3].source = Some(ScriptDocument::new(format!(
+                "require({require_expression})\n"
+            )));
+
+            let diagnostics = analyze_project("DataModel", "MainScript", &nodes)
+                .expect("unsupported require forms should remain unresolved");
+
+            assert!(
+                diagnostics
+                    .iter()
+                    .all(|diagnostic| { diagnostic.module_id.as_deref() != Some("SharedModule") }),
+                "require expression {require_expression:?} must not load a guessed module"
+            );
+        }
+    }
+
+    #[test]
+    fn project_analysis_resolves_static_service_aliases() {
+        let mut nodes = project_nodes();
+        nodes[2].source = Some(ScriptDocument::new("local = false\n"));
+        nodes[3].source = Some(ScriptDocument::new(
+            "local storage = game:GetService(\"ReplicatedStorage\")\nrequire(storage.Shared)\n",
+        ));
+
+        let diagnostics = analyze_project("DataModel", "MainScript", &nodes)
+            .expect("valid project snapshots should be analyzed");
+
+        assert!(
+            diagnostics.iter().any(|diagnostic| {
+                diagnostic.kind == DiagnosticKind::Syntax
+                    && diagnostic.module_id.as_deref() == Some("SharedModule")
+            }),
+            "diagnostics: {diagnostics:#?}"
+        );
+    }
+
+    #[test]
+    fn project_analysis_loads_the_pinned_partial_engine_types_and_luau_builtins() {
+        let mut nodes = project_nodes();
+        nodes[3].source = Some(ScriptDocument::new(
+            "--!strict\nlocal parent: Instance? = script.Parent\nlocal storage: Instance = game:GetService(\"ReplicatedStorage\")\nprint(parent, storage.Name)\n",
+        ));
+
+        let diagnostics = analyze_project("DataModel", "MainScript", &nodes)
+            .expect("valid project snapshots should be analyzed");
+
+        assert!(diagnostics.is_empty(), "diagnostics: {diagnostics:#?}");
+    }
+
+    #[test]
+    fn project_autocomplete_uses_the_pinned_engine_types_without_mutating_source() {
+        let mut nodes = project_nodes();
+        let source = "--!strict\nlocal instance: Instance\ninstance.\n";
+        nodes[3].source = Some(ScriptDocument::new(source));
+
+        let completions = complete_project(
+            "DataModel",
+            "MainScript",
+            &nodes,
+            SourcePosition { line: 2, column: 9 },
+        )
+        .expect("a cursor after an Instance member separator should autocomplete");
+
+        assert!(
+            completions
+                .items
+                .iter()
+                .any(|item| item.label == "FindFirstChild"),
+            "completions: {completions:#?}"
+        );
+        assert!(
+            completions
+                .items
+                .iter()
+                .any(|item| item.label == "Name" && item.kind == CompletionKind::Property),
+            "completions: {completions:#?}"
+        );
+        assert_eq!(nodes[3].source.as_ref().unwrap().source(), source);
+    }
+
+    #[test]
+    fn project_autocomplete_rejects_cursor_positions_inside_utf8_characters() {
+        let mut nodes = project_nodes();
+        let source = "local value = \"🌍\"\n";
+        nodes[3].source = Some(ScriptDocument::new(source));
+        let emoji_column = source.find('🌍').unwrap() as u32 + 1;
+
+        let error = complete_project(
+            "DataModel",
+            "MainScript",
+            &nodes,
+            SourcePosition {
+                line: 0,
+                column: emoji_column,
+            },
+        )
+        .expect_err("a cursor inside a UTF-8 code point must be rejected");
+
+        assert!(matches!(
+            error,
+            AnalysisFailure::InvalidCursorPosition { .. }
+        ));
+    }
+
+    #[test]
+    fn local_definition_navigation_resolves_a_reference_to_its_declaration() {
+        let document = ScriptDocument::new("local answer = 41\nprint(answer)\n");
+        let definition = find_local_definition(&document, SourcePosition { line: 1, column: 8 })
+            .expect("local reference lookup should succeed")
+            .expect("the cursor is on a local reference");
+
+        assert_eq!(definition.start_line, 1);
+        assert_eq!(definition.start_column, 7);
+        assert_eq!(definition.end_line, 1);
+        assert_eq!(definition.end_column, 13);
+    }
+
+    #[test]
+    fn local_definition_navigation_respects_shadowing_and_ignores_globals() {
+        let shadowed =
+            ScriptDocument::new("local value = 1\nfunction read(value)\n    return value\nend\n");
+        let definition = find_local_definition(
+            &shadowed,
+            SourcePosition {
+                line: 2,
+                column: 12,
+            },
+        )
+        .expect("parameter lookup should succeed")
+        .expect("the cursor is on a parameter reference");
+        assert_eq!(definition.start_line, 2);
+        assert_eq!(definition.start_column, 15);
+
+        let global = ScriptDocument::new("print(1)\n");
+        let definition = find_local_definition(&global, SourcePosition { line: 0, column: 1 })
+            .expect("global lookup should succeed");
+        assert_eq!(definition, None);
     }
 
     #[test]

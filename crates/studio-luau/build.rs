@@ -14,6 +14,8 @@ fn main() {
     println!("cargo:rerun-if-changed=native/CMakeLists.txt");
     println!("cargo:rerun-if-changed=native/bridge.cpp");
     println!("cargo:rerun-if-changed=native/bridge.h");
+    println!("cargo:rerun-if-changed=native/engine_definitions.cpp.in");
+    println!("cargo:rerun-if-changed=native/definitions/roblox-engine-0.745.0.7451137.luau");
     println!("cargo:rerun-if-changed={}", luau_source.display());
 
     let destination = cmake::Config::new(manifest_dir.join("native"))

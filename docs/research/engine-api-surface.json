@@ -1,0 +1,62 @@
+{
+  "reference": {
+    "studioVersion": "0.745.0.7451137",
+    "uploadId": "version-7062aec9dbe74b14",
+    "apiDumpUrl": "https://setup.rbxcdn.com/channel/common/version-7062aec9dbe74b14-API-Dump.json",
+    "apiDumpSha256": "0962f777e3085487e368ed019c35bdb07cd02f6659aa7212dc2ad6e24bb41efe",
+    "apiDumpBytes": 7669358,
+    "schemaVersion": 1,
+    "classCount": 944,
+    "enumCount": 654
+  },
+  "classes": {
+    "Instance": {
+      "properties": ["Name", "Parent"],
+      "functions": ["FindFirstChild", "GetChildren", "GetDescendants", "GetFullName", "WaitForChild"]
+    },
+    "ServiceProvider": { "properties": [], "functions": ["GetService"] },
+    "DataModel": { "properties": [], "functions": [] },
+    "LuaSourceContainer": { "properties": [], "functions": [] },
+    "ModuleScript": { "properties": [], "functions": [] },
+    "BaseScript": { "properties": [], "functions": [] },
+    "Script": { "properties": [], "functions": [] },
+    "LocalScript": { "properties": [], "functions": [] },
+    "Folder": { "properties": [], "functions": [] },
+    "PVInstance": { "properties": [], "functions": [] },
+    "Model": { "properties": [], "functions": [] },
+    "WorldRoot": { "properties": [], "functions": [] },
+    "Workspace": { "properties": [], "functions": [] },
+    "BasePart": { "properties": ["Anchored"], "functions": [] },
+    "FormFactorPart": { "properties": [], "functions": [] },
+    "Part": { "properties": [], "functions": [] }
+  },
+  "globals": {
+    "game": "DataModel",
+    "script": "LuaSourceContainer",
+    "workspace": "Workspace"
+  },
+  "manualTypeOverrides": {
+    "Instance.Parent": "Instance?",
+    "Instance.FindFirstChild.return": "Instance?",
+    "Instance.WaitForChild.return": "Instance?",
+    "Instance.WaitForChild.timeOut": "number?"
+  },
+  "typeMappings": {
+    "Primitive.string": "string",
+    "Primitive.string?": "string?",
+    "Primitive.bool": "boolean",
+    "Primitive.int": "number",
+    "Primitive.float": "number",
+    "Primitive.double": "number",
+    "Primitive.null": "()",
+    "Class.Instance": "Instance",
+    "DataType.Instances": "{Instance}"
+  },
+  "limitations": [
+    "Only the class and member allowlists above are generated; all other API dump entries are omitted.",
+    "GetService returns the general Instance type; service-specific classes and literal-string overloads are not modeled.",
+    "Workspace child names are project data and are not part of this versioned Engine stub; static module resolution is a separate resolver contract.",
+    "The API dump reports Parent and FindFirstChild/WaitForChild returns as non-optional; this stub marks their null-capable behavior optional based on their documented behavior.",
+    "Script and LocalScript source properties and all runtime/service behavior are intentionally omitted."
+  ]
+}

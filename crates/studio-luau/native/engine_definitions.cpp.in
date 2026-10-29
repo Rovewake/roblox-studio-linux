@@ -1,0 +1,6 @@
+#include <string_view>
+
+std::string_view studio_luau_engine_type_definitions() noexcept
+{
+    return R"LUAUTYPE(@ROBLOX_ENGINE_TYPE_SOURCE@)LUAUTYPE";
+}
